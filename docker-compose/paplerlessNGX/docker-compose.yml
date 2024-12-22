@@ -1,0 +1,168 @@
+# use this script instead of compose -> {bash -c "$(curl --location --silent --show-error https://raw.githubusercontent.com/paperless-ngx/paperless-ngx/main/install-paperless-ngx.sh)"} 
+
+
+
+networks:
+  paperless_default:
+    external: true
+    name: "paperless_default"
+
+services:
+
+  paperless-broker-1:
+    command:
+      - "redis-server"
+    container_name: "paperless-broker-1"
+    entrypoint:
+      - "docker-entrypoint.sh"
+    environment:
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      - "GOSU_VERSION=1.17"
+      - "REDIS_VERSION=7.4.1"
+      - "REDIS_DOWNLOAD_URL=http://download.redis.io/releases/redis-7.4.1.tar.gz"
+      - "REDIS_DOWNLOAD_SHA=bc34b878eb89421bbfca6fa78752343bf37af312a09eb0fae47c9575977dfaa2"
+    expose:
+      - "6379/tcp"
+    image: "docker.io/library/redis:7"
+
+    logging:
+      driver: "json-file"
+      options: {}
+    networks:
+      - "paperless_default"
+    restart: "unless-stopped"
+    volumes:
+      - "paperless_redisdata:/data"
+    working_dir: "/data"
+
+  paperless-db-1:
+    command:
+      - "postgres"
+    container_name: "paperless-db-1"
+    environment:
+      - "POSTGRES_PASSWORD=paperless"
+      - "POSTGRES_DB=paperless"
+      - "POSTGRES_USER=paperless"
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib/postgresql/16/bin"
+      - "GOSU_VERSION=1.17"
+      - "LANG=en_US.utf8"
+      - "PG_MAJOR=16"
+      - "PG_VERSION=16.6-1.pgdg120+1"
+      - "PGDATA=/var/lib/postgresql/data"
+    expose:
+      - "5432/tcp"
+    image: "docker.io/library/postgres:16"
+    logging:
+      driver: "json-file"
+      options: {}
+    networks:
+      - "paperless_default"
+    restart: "unless-stopped"
+    volumes:
+      - "paperless_pgdata:/var/lib/postgresql/data"
+
+  paperless-gotenberg-1:
+    container_name: "paperless-gotenberg-1"
+    environment:
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      - "CHROMIUM_BIN_PATH=/usr/bin/chromium"
+      - "LIBREOFFICE_BIN_PATH=/usr/lib/libreoffice/program/soffice.bin"
+      - "UNOCONVERTER_BIN_PATH=/usr/bin/unoconverter"
+      - "PDFTK_BIN_PATH=/usr/bin/pdftk"
+      - "QPDF_BIN_PATH=/usr/bin/qpdf"
+      - "EXIFTOOL_BIN_PATH=/usr/bin/exiftool"
+
+    expose:
+      - "3000/tcp"
+
+    hostname: "ecf48ea626dd"
+
+    image: "docker.io/gotenberg/gotenberg:8.7"
+
+    logging:
+      driver: "json-file"
+      options: {}
+
+    networks:
+      - "paperless_default"
+
+    restart: "unless-stopped"
+
+    user: "gotenberg"
+
+    working_dir: "/home/gotenberg"
+
+  paperless-tika-1:
+    container_name: "paperless-tika-1"
+    environment:
+      - "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      - "TIKA_VERSION=3.0.0"
+    expose:
+      - "9998/tcp"
+    image: "docker.io/apache/tika:latest"
+    logging:
+      driver: "json-file"
+      options: {}
+    networks:
+      - "paperless_default"
+    restart: "unless-stopped"
+    user: "35002:35002"
+
+  paperless-webserver-1:
+
+    container_name: "paperless-webserver-1"
+
+
+    environment:
+      - "PAPERLESS_TIKA_ENDPOINT=http://tika:9998"
+      - "PAPERLESS_OCR_LANGUAGE=eng+deu"
+      - "PAPERLESS_TIME_ZONE=Europe/Berlin"
+      - "PAPERLESS_DBHOST=db"
+      - "PAPERLESS_TIKA_GOTENBERG_ENDPOINT=http://gotenberg:3000"
+      - "PAPERLESS_SECRET_KEY=Nw:f}U1SlG>d*61J|EjP@)iU+,b,y<YU=?_Evow3f7[<*$${:/|zwNP-5Es2oELd,"
+      - "PAPERLESS_TIKA_ENABLED=1"
+      - "PAPERLESS_REDIS=redis://broker:6379"
+      - "PAPERLESS_URL=https://paperless.umothegreat.xyz"
+      - "PAPERLESS_OCR_LANGUAGES=eng deu"
+      - "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      - "LANG=C.UTF-8"
+      - "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305"
+      - "PYTHON_VERSION=3.12.7"
+      - "PYTHON_SHA256=24887b92e2afd4a2ac602419ad4b596372f67ac9b077190f459aba390faf5550"
+      - "PYTHONDONTWRITEBYTECODE=1"
+      - "PYTHONUNBUFFERED=1"
+      - "PYTHONWARNINGS=ignore:::django.http.response:517"
+      - "PNGX_CONTAINERIZED=1"
+
+    image: "ghcr.io/paperless-ngx/paperless-ngx:latest"
+
+    logging:
+      driver: "json-file"
+      options: {}
+
+    networks:
+      - "paperless_default"
+
+    ports:
+      - "8011:8000/tcp"
+
+    restart: "unless-stopped"
+
+    volumes:
+      - "/data/paperless/paperless-ngx/consume:/usr/src/paperless/consume"
+      - "/data/paperless/paperless-ngx/export:/usr/src/paperless/export"
+      - "paperless_data:/usr/src/paperless/data"
+      - "paperless_media:/usr/src/paperless/media"
+
+
+version: "3.6"
+
+volumes:
+  paperless_data:
+    external: true
+  paperless_media:
+    external: true
+  paperless_pgdata:
+    external: true
+  paperless_redisdata:
+    external: true

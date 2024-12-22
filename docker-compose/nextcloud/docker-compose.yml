@@ -1,0 +1,63 @@
+version: "3.6"
+
+networks:
+  nextcloud:
+    name: "nextcloud"
+
+services:
+
+  collabora_online:
+    container_name: "collabora_online"
+    image: "collabora/code:latest"
+    environment:
+      # Replace with your Collabora domain
+      - "server_name=<YOUR_COLLABORA_DOMAIN>"
+      - "username=admin"
+      - "password=<YOUR_COLLABORA_PASSWORD>"
+      - "extra_params=--o:ssl.enable=false --o:ssl.termination=true"
+      # Replace with your Nextcloud domain (escaped for Collabora)
+      - "domain=<YOUR_NEXTCLOUD_DOMAIN_ESCAPED>"
+    networks:
+      - "nextcloud"
+    ports:
+      - "9980:9980/tcp"
+    restart: "always"
+
+  nextcloud:
+    container_name: "nextcloud"
+    image: "linuxserver/nextcloud:latest"
+    environment:
+      - "MYSQL_PASSWORD=<YOUR_DB_PASSWORD>"
+      - "PUID=1000"
+      - "PGID=1000"
+      - "TZ=Europe/Berlin"
+      - "MYSQL_HOST=mariadb"
+      - "MYSQL_DATABASE=nextcloud"
+      - "MYSQL_USER=nextcloud"
+    networks:
+      - "nextcloud"
+    ports:
+      - "444:443/tcp"
+    restart: "unless-stopped"
+    volumes:
+      - "/data/nextcloud/config:/config"
+      - "/data/nextcloud/nextcloud-data:/data"
+
+  nextcloud-mariadb:
+    container_name: "nextcloud-mariadb"
+    image: "linuxserver/mariadb:latest"
+    environment:
+      - "MYSQL_DATABASE=nextcloud"
+      - "MYSQL_USER=nextcloud"
+      - "MYSQL_PASSWORD=<YOUR_DB_PASSWORD>"
+      - "PUID=1000"
+      - "PGID=1000"
+      - "TZ=Europe/Berlin"
+      - "MYSQL_ROOT_PASSWORD=<YOUR_ROOT_PASSWORD>"
+    networks:
+      - "nextcloud"
+    ports:
+      - "3306:3306/tcp"
+    restart: "unless-stopped"
+    volumes:
+      - "/data/mariadb/config:/config"

@@ -1,0 +1,12 @@
+services:
+  nginx-proxy-manager:
+    container_name: "nginx-proxy-manager"
+    image: "jc21/nginx-proxy-manager:latest"
+    ports:
+      - "443:443/tcp"
+      - "80:80/tcp"
+      - "81:81/tcp"
+    restart: "unless-stopped"
+    volumes:
+      - "/data/nginx-proxy-manager/letsencrypt:/etc/letsencrypt"
+      - "/data/nginx-proxy-manager:/data"

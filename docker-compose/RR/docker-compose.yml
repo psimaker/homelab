@@ -1,0 +1,183 @@
+#Be careful with volume structure
+
+networks:
+  rr-network:
+    external: true
+    name: "rr-network"
+
+services:
+
+  bazarr:
+    container_name: "bazarr"
+    image: "lscr.io/linuxserver/bazarr:latest"
+    environment:
+      - "TZ=Europe/Berlin"
+      - "PUID=1000"
+      - "PGID=1000"
+    networks:
+      - "rr-network"
+    ports:
+      - "6767:6767/tcp"
+    restart: "unless-stopped"
+    volumes:
+      - "/data/rr/config/bazarr:/config"
+      - "/data/rr/media:/data"
+
+  flaresolverr:
+    container_name: "flaresolverr"
+    image: "ghcr.io/flaresolverr/flaresolverr:latest"
+    environment:
+      - "TZ=Europe/Berlin"
+      - "LOG_LEVEL=info"
+      - "CAPTCHA_SOLVER=none"
+    networks:
+      - "rr-network"
+    ports:
+      - "8191:8191/tcp"
+    restart: "unless-stopped"
+
+  jellyseerr:
+    container_name: "jellyseerr"
+    image: "fallenbagel/jellyseerr:latest"
+    environment:
+      - "TZ=Europe/Berlin"
+    networks:
+      - "rr-network"
+    ports:
+      - "5055:5055/tcp"
+    restart: "unless-stopped"
+    user: "1000:1000"
+    volumes:
+      - "/data/rr/config/jellyseerr:/app/config"
+
+  prefetcharr:
+    container_name: "prefetcharr"
+    image: "phueber/prefetcharr:latest"
+    environment:
+      - "SONARR_API_KEY=<YOUR_SONARR_API_KEY>"
+      - "SONARR_URL=http://<YOUR_SONARR_IP>:8989"
+      - "INTERVAL=480"
+      - "LOG_DIR=/log"
+      - "MEDIA_SERVER_TYPE=plex"
+      - "MEDIA_SERVER_API_KEY=<YOUR_MEDIA_SERVER_API_KEY>"
+      - "REMAINING_EPISODES=2"
+      - "MEDIA_SERVER_URL=http://<YOUR_MEDIA_SERVER_IP>:32400"
+    networks:
+      - "rr-network"
+    restart: "unless-stopped"
+    volumes:
+      - "/data/rr/config/prefetcharr/log:/log"
+
+  prowlarr:
+    container_name: "prowlarr"
+    image: "lscr.io/linuxserver/prowlarr:latest"
+    environment:
+      - "TZ=Europe/Berlin"
+      - "PUID=1000"
+      - "PGID=1000"
+    networks:
+      - "rr-network"
+    ports:
+      - "9696:9696/tcp"
+    restart: "unless-stopped"
+    volumes:
+      - "/data/rr/config/prowlarr:/config"
+
+  radarr:
+    container_name: "radarr"
+    image: "lscr.io/linuxserver/radarr:latest"
+    environment:
+      - "TZ=Europe/Berlin"
+      - "PUID=1000"
+      - "PGID=1000"
+    networks:
+      - "rr-network"
+    ports:
+      - "7878:7878/tcp"
+    restart: "unless-stopped"
+    volumes:
+      - "/data/rr/config/radarr:/config"
+      - "/data/rr/downloads/complete:/downloads/complete"
+      - "/data/rr/media/movies:/data"
+
+  sabnzbd:
+    container_name: "sabnzbd"
+    image: "lscr.io/linuxserver/sabnzbd:latest"
+    environment:
+      - "TZ=Europe/Berlin"
+      - "PUID=1000"
+      - "PGID=1000"
+    networks:
+      - "rr-network"
+    ports:
+      - "8087:8080/tcp"
+      - "9090:9090/tcp"
+    restart: "unless-stopped"
+    volumes:
+      - "/data/rr/config/sabnzbd:/config"
+      - "/data/rr/downloads/complete:/downloads/complete"
+      - "/data/rr/downloads/incomplete:/downloads/incomplete"
+
+  sonarr:
+    container_name: "sonarr"
+    image: "lscr.io/linuxserver/sonarr:latest"
+    environment:
+      - "TZ=Europe/Berlin"
+      - "PUID=1000"
+      - "PGID=1000"
+      - "SONARR_CHANNEL=v4-stable"
+      - "SONARR_BRANCH=main"
+    networks:
+      - "rr-network"
+    ports:
+      - "8989:8989/tcp"
+    restart: "unless-stopped"
+    volumes:
+      - "/data/rr/config/sonarr:/config"
+      - "/data/rr/downloads/complete:/downloads/complete"
+      - "/data/rr/media/tvshows:/data"
+
+  tdarr:
+    container_name: "tdarr"
+    image: "ghcr.io/haveagitgat/tdarr"
+    environment:
+      - "PUID=1000"
+      - "PGID=1000"
+      - "serverIP=0.0.0.0"
+      - "internalNode=true"
+      - "nodeIP=0.0.0.0"
+      - "WEB_UI_PORT=8265"
+      - "SERVER_PORT=8266"
+      - "NODE_PORT=8267"
+      - "TZ=Europe/Berlin"
+    networks:
+      - "rr-network"
+    ports:
+      - "8264:8264/tcp"
+      - "8265:8265/tcp"
+      - "8266:8266/tcp"
+    restart: "unless-stopped"
+    volumes:
+      - "/data/rr/config/tdarr/configs:/app/configs"
+      - "/data/rr/config/tdarr/logs:/app/logs"
+      - "/data/rr/config/tdarr/server:/app/server"
+      - "/data/rr/media:/mnt/media"
+
+  umlautadaptarr:
+    container_name: "umlautadaptarr"
+    image: "pcjones/umlautadaptarr:latest"
+    environment:
+      - "PUID=1000"
+      - "PGID=1000"
+      - "TZ=Europe/Berlin"
+      - "RADARR__APIKEY=<YOUR_RADARR_API_KEY>"
+      - "SONARR__ENABLED=true"
+      - "RADARR__HOST=http://<YOUR_RADARR_IP>:7878"
+      - "SONARR__APIKEY=<YOUR_SONARR_API_KEY>"
+      - "SONARR__HOST=http://<YOUR_SONARR_IP>:8989"
+    networks:
+      - "rr-network"
+    ports:
+      - "5005:5005/tcp"
+      - "5006:5006/tcp"
+    restart: "unless-stopped"
