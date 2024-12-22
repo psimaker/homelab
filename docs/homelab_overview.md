@@ -56,6 +56,4 @@ This document provides a high-level summary of the services and tools running in
   
 - **Kubernetes** Potentially exploring a more advanced orchestrator in the future.  
 
-Feel free to browse the [architecture documentation](architecture.md) for a technical overview of how the services are networked.
-
 
