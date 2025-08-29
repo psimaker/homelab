@@ -46,8 +46,6 @@ Intelligent document management system with:
 
 ![Your GitHub Stats](https://github-readme-stats.vercel.app/api?username=psimaker&show_icons=true&theme=radical)
 
-![Top Languages](https://github-readme-stats.vercel.app/api/top-langs/?username=psimaker&layout=compact&theme=radical)
-
 ## 🎯 What I'm Currently Working On
 
 - 🔧 **Optimizing container orchestration** with Kubernetes
