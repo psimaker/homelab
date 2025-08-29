@@ -285,7 +285,7 @@ This project is part of my personal infrastructure, but suggestions and improvem
 ## 📞 Contact
 
 - **GitHub**: [psimaker](https://github.com/psimaker)
-- **LinkedIn**: www.linkedin.com/in/umut-erdem
+- **LinkedIn**: https://www.linkedin.com/in/umut-erdem
 - **Email**: umut.erdem@protonmail.com
 
 ## 📄 License
