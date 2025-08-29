@@ -285,8 +285,8 @@ This project is part of my personal infrastructure, but suggestions and improvem
 ## 📞 Contact
 
 - **GitHub**: [psimaker](https://github.com/psimaker)
-- **LinkedIn**: [Your LinkedIn Profile]
-- **Email**: your.email@example.com
+- **LinkedIn**: www.linkedin.com/in/umut-erdem
+- **Email**: umut.erdem@protonmail.com
 
 ## 📄 License
 
@@ -294,4 +294,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-*Built with ❤️ using Docker and modern DevOps practices.*
+*Built with ❤️ using Docker.*
