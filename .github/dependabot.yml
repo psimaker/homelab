@@ -1,0 +1,71 @@
+version: 2
+updates:
+  # Monitor Docker base images
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "⬆️"
+      include: "scope"
+    ignore:
+      - dependency-name: "node"
+        versions: ["18"]
+      - dependency-name: "python"
+        versions: ["3.9"]
+
+  # Monitor GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "⬆️"
+      include: "scope"
+
+  # Security updates (critical vulnerabilities) - daily check
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "security"
+      - "dependencies"
+      - "critical"
+    open-pull-requests-limit: 5
+    versioning-strategy: "auto"
+
+  # Major version updates - monthly with manual review
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "major-update"
+      - "needs-review"
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
+
+registries:
+  # Docker Hub registry
+  dockerhub:
+    type: docker-registry
+    url: https://registry.hub.docker.com
+    username: ${{secrets.DOCKERHUB_USERNAME}}
+    password: ${{secrets.DOCKERHUB_PASSWORD}}
+
+  # GitHub Container Registry
+  github:
+    type: docker-registry
+    url: https://ghcr.io
+    username: ${{github.actor}}
+    password: ${{secrets.GITHUB_TOKEN}}

@@ -1,0 +1,145 @@
+name: Security Scan and Auto Updates
+on:
+  schedule:
+    - cron: '0 0 * * 1'  # Run every Monday at midnight
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Upload Trivy results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Check for secrets
+      uses: gitleaks/gitleaks-action@v2
+      with:
+        config-path: .gitleaks.toml
+
+  docker-update-check:
+    runs-on: ubuntu-latest
+    needs: security-scan
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check for outdated Docker images
+      run: |
+        # Extract all Docker images from compose files
+        find . -name "*docker-compose*.yml" -o -name "*docker-compose*.yaml" | while read file; do
+          echo "🔍 Checking $file"
+          grep -E "image:" "$file" | grep -v "#" | while read line; do
+            image=$(echo "$line" | awk '{print $2}' | tr -d '"')
+            echo "Checking $image"
+            
+            # Get current digest
+            current_digest=$(docker manifest inspect "$image" 2>/dev/null | jq -r '.config.digest' || echo "unknown")
+            
+            # Try to get latest tag
+            base_image=$(echo "$image" | cut -d: -f1)
+            latest_digest=$(docker manifest inspect "$base_image:latest" 2>/dev/null | jq -r '.config.digest' || echo "unknown")
+            
+            if [ "$current_digest" != "$latest_digest" ] && [ "$latest_digest" != "unknown" ]; then
+              echo "🔄 Update available for $image"
+              echo "::warning file=$file,title=Docker Image Update::Update available for $image"
+            else
+              echo "✅ $image is up to date"
+            fi
+          done
+        done
+
+  create-update-issue:
+    runs-on: ubuntu-latest
+    needs: [security-scan, docker-update-check]
+    if: always()
+    
+    steps:
+    - name: Create maintenance issue
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const title = '🚀 Monthly Maintenance: Security Updates & Docker Image Review';
+          const body = `
+          # Monthly Maintenance Checklist
+          
+          ## Security Scan Results
+          - Trivy vulnerability scan completed
+          - Gitleaks secret detection executed
+          - [View full results](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})
+          
+          ## Docker Image Updates Needed
+          Check the workflow logs for specific images that need updating.
+          
+          ## Action Items:
+          - [ ] Review critical vulnerabilities
+          - [ ] Update outdated Docker images
+          - [ ] Test updates in staging environment
+          - [ ] Deploy to production
+          
+          ## Next scheduled check: ${new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString()}
+          `;
+          
+          // Check if issue already exists
+          const issues = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: ['maintenance', 'security']
+          });
+          
+          const existingIssue = issues.data.find(issue => issue.title.includes('Monthly Maintenance'));
+          
+          if (!existingIssue) {
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['maintenance', 'security', 'automated']
+            });
+          }
+
+  auto-commit-dependabot:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Auto-approve Dependabot PRs
+      uses: actions/github-script@v6
+      with:
+        script: |
+          if (context.payload.pull_request && context.actor === 'dependabot[bot]') {
+            await github.rest.pulls.createReview({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              event: 'APPROVE',
+              body: '✅ Auto-approved by security workflow - dependency update looks good!'
+            });
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              labels: ['dependencies', 'auto-approved']
+            });
+          }
