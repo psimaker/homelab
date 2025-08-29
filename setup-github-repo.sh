@@ -29,8 +29,12 @@ fi
 # Delete existing repository if it exists
 echo "🗑️ Checking for existing repository..."
 if gh repo view "$GITHUB_USER/$REPO_NAME" &> /dev/null; then
-    echo "⚠️ Repository exists - deleting and recreating..."
-    gh repo delete "$GITHUB_USER/$REPO_NAME" --confirm
+    echo "⚠️ Repository exists - requesting delete permissions..."
+    # Request the required scope first
+    gh auth refresh -h github.com -s delete_repo
+    
+    echo "🗑️ Deleting existing repository..."
+    gh repo delete "$GITHUB_USER/$REPO_NAME" --yes
 fi
 
 # Create the repository
