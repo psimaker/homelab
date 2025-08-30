@@ -133,7 +133,7 @@ graph TB
 #### Model Management:
 ```bash
 # Pull and run state-of-the-art models
-docker exec -it ollama ollama pull gpt-oss:20b
+docker exec -it ollama ollama pull gpt-oss:20b # JSON parsing issues
 docker exec -it ollama ollama pull deepseek-r1:70b
 docker exec -it ollama ollama pull deepseek-coder:33b
 
@@ -143,7 +143,7 @@ docker logs ollama --tail=50
 
 # API access for integration
 curl http://localhost:11434/api/generate -d '{
-  "model": "llama3",
+  "model": "gpt-oss:20b",
   "prompt": "Explain DevOps best practices",
   "stream": false
 }'
