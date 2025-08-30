@@ -157,7 +157,7 @@ cd ai-stack
 docker-compose up -d
 
 # Verify GPU acceleration
-docker exec -it ollama ollama run llama3 "Hello" --verbose
+docker exec -it ollama ollama run gpt-oss:20b "Hello" --verbose
 
 # Access interfaces:
 # OpenWebUI: https://ai.your-domain.com
