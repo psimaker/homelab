@@ -133,9 +133,9 @@ graph TB
 #### Model Management:
 ```bash
 # Pull and run state-of-the-art models
-docker exec -it ollama ollama pull llama3:70b
-docker exec -it ollama ollama pull mistral:8x22b
-docker exec -it ollama ollama pull codellama:34b
+docker exec -it ollama ollama pull gpt-oss:20b
+docker exec -it ollama ollama pull deepseek-r1:70b
+docker exec -it ollama ollama pull deepseek-coder:33b
 
 # Monitor model performance
 docker exec -it ollama ollama ps
@@ -170,7 +170,8 @@ docker exec -it ollama ollama run llama3 "Hello" --verbose
 ### Prerequisites
 - Docker Engine 20.10+
 - Docker Compose 2.0+
-- 8GB+ RAM recommended
+- 32GB+ RAM recommended
+- a lot of VRAM :)
 - 100GB+ storage
 
 ### Installation
