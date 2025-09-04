@@ -275,13 +275,26 @@ The infrastructure uses multiple Docker networks for security isolation:
 - Environment variables for sensitive data
 - VPN integration for secure access
 
+
+## 🗺️ Roadmap
+
+- **Experimenting with Freqtrade and ML**  
+    Backtesting, hyperparameter tuning, and risk controls in Docker; metrics export for strategy health.
+    
+- **n8n projects with complex AI agents**  
+    Tool-using chains, retrieval-augmented generation, and guarded actions (rate limits, safe-ops).
+    
+- **Mac Studio LLM cluster (near-term)**  
+    Build a cluster of multiple **Mac Studios** and use **Kubernetes** to serve **large LLMs**.
+    
+- **Backup/restore drills**  
+    Regular test restores for Immich, Nextcloud, and Paperless with short runbooks.
+
+
 ## 🚦 Status
 
 **Active Development** - This homelab is continuously improved with new services and optimizations. All core services are production-ready and stable.
 
-## 🤝 Contributing
-
-This project is part of my personal infrastructure, but suggestions and improvements are welcome through GitHub issues.
 
 ## 📞 Contact
 
