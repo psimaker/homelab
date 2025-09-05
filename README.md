@@ -396,7 +396,6 @@ The infrastructure uses multiple Docker networks for security isolation:
 
 ## 📞 Contact
 
-- **GitHub**: [psimaker](https://github.com/psimaker)
 - **LinkedIn**: https://www.linkedin.com/in/umut-erdem
 - **Email**: umut.erdem@protonmail.com
 
