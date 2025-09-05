@@ -25,7 +25,7 @@ graph TB
 
     subgraph SERVICES["⚡ Application Services - 40+ Containers"]
         subgraph AI["🤖 AI/ML Platform"]
-            OLLAMA["<b>Ollama</b><br/><i>LLM Engine</i><br/>• Llama 3 70B<br/>• DeepSeek R1<br/>• GPU Accelerated"]
+            OLLAMA["<b>Ollama</b><br/><i>LLM Engine</i><br/>• gpt-oss:20b<br/>• qwen3:32b<br/>• GPU Accelerated"]
             OPENWEBUI["<b>OpenWebUI</b><br/><i>ChatGPT Alternative</i><br/>• Edge-TTS German<br/>• Apache Tika"]
         end
 
@@ -160,7 +160,7 @@ This homelab features a cutting-edge AI stack with **Ollama** for local LLM infe
 - **Monitoring Integration**: AI services integrated with Prometheus monitoring stack
 
 #### Key Features:
-- **Local LLM Inference**: Run models like Llama 3 (70B), Mistral (8x22B), and CodeLlama locally
+- **Local LLM Inference**: Run models like qwen3:32b, gpt-oss:20b, and qwen2.5-coder:32b locally
 - **Enterprise Web Interface**: Production-grade web UI comparable to ChatGPT Plus
 - **Multi-Model Orchestration**: Dynamic model loading and switching capabilities
 - **Voice Integration**: Edge-TTS with German language support for text-to-speech
@@ -232,8 +232,8 @@ graph TB
 ```bash
 # Pull and run state-of-the-art models
 docker exec -it ollama ollama pull gpt-oss:20b # JSON parsing issues
-docker exec -it ollama ollama pull deepseek-r1:70b
-docker exec -it ollama ollama pull deepseek-coder:33b
+docker exec -it ollama ollama pull qwen3:32b
+docker exec -it ollama ollama pull qwen2.5-coder:32b
 
 # Monitor model performance
 docker exec -it ollama ollama ps
