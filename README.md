@@ -10,66 +10,73 @@ This homelab represents a fully containerized infrastructure with over 40 Docker
 
 ```mermaid
 
-%% ---------- Homelab — Compact Overview (GitHub-safe, legend bottom-right) ----------
-flowchart LR
+%%{init: {'theme':'dark', 'themeVariables': { 'primaryColor':'#1f2937', 'primaryBorderColor':'#3b82f6', 'primaryTextColor':'#f3f4f6', 'lineColor':'#6366f1', 'secondaryColor':'#374151', 'tertiaryColor':'#1e293b'}}}%%
 
-  %% User / Entry
-  USER([👤 User / Client])
+graph TB
+    %% ---------- Professional Homelab Infrastructure ----------
+    
+    USER["👤 <b>Users & Clients</b><br/><i>Multi-Platform Access</i>"]
+    
+    subgraph EDGE["🛡️ Network Edge & Security Layer"]
+        NPM["📡 <b>Nginx Proxy Manager</b><br/><i>Reverse Proxy & SSL</i><br/>• Let's Encrypt<br/>• Access Control<br/>• Rate Limiting"]
+        VPN["🔐 <b>Gluetun VPN</b><br/><i>Container VPN Client</i><br/>• Multi-Provider<br/>• Kill Switch<br/>• Port Forwarding"]
+    end
 
-  %% Edge & Networking
-  subgraph EDGE[🌐 Edge & Networking]
-    direction TB
-    NPM[🔁 Nginx Proxy Manager<br/>TLS termination · Reverse proxy · ACME]
-    VPN[🛡️ Gluetun VPN<br/>WireGuard / OpenVPN]
-  end
+    subgraph SERVICES["⚡ Application Services"]
+        subgraph AI["🤖 AI/ML Platform"]
+            OLLAMA["<b>Ollama</b><br/><i>Local LLM Runtime</i>"]
+            OPENWEBUI["<b>Open WebUI</b><br/><i>Chat Interface</i>"]
+        end
 
-  %% Core Services
-  subgraph CORE[🧩 Core Services]
-    direction LR
-    AI[🤖 AI Stack<br/>OLLAMA · OpenWebUI]
-    STO[💾 Storage<br/>Immich · Nextcloud]
-    MED[🎬 Media<br/>Plex · Radarr*]
-    AUT[⚙️ Automation<br/>n8n · Paperless]
-    MON[📊 Observability<br/>Portainer · Prometheus]
-  end
+        subgraph STORAGE["💾 Storage & Cloud"]
+            IMMICH["<b>Immich</b><br/><i>Photo Management</i><br/>ML-Powered"]
+            NEXTCLOUD["<b>Nextcloud</b><br/><i>Private Cloud</i><br/>Collaboration"]
+        end
 
-  %% Flows
-  USER -- HTTPS --> NPM
-  NPM -- route --> AI
-  NPM -- route --> STO
-  NPM -- route --> AUT
-  NPM -- route --> MON
-  VPN -- secure tunnel --> MED
+        subgraph MEDIA["🎬 Media Stack"]
+            PLEX["<b>Plex</b><br/><i>Media Server</i>"]
+            RADARR["<b>*arr Stack</b><br/><i>Automation</i>"]
+        end
 
-  %% Legend (bottom-right, compact)
-  subgraph LEGEND[Legend]
-    direction TB
-    L0[Legend]
-    L1[HTTPS = User-Traffic via NPM]
-    L2[secure tunnel = Media via VPN]
-    L3[* = Media nur über VPN]
-  end
+        subgraph AUTO["⚙️ Automation"]
+            N8N["<b>n8n</b><br/><i>Workflows</i><br/>350+ Integrations"]
+            PAPERLESS["<b>Paperless-ngx</b><br/><i>Document Mgmt</i><br/>OCR & Search"]
+        end
 
-  %% Position the legend to the bottom-right (dotted, can be commented out)
-  MED -.-> L0
-  MON -.-> L0
+        subgraph MON["📊 Monitoring"]
+            PORTAINER["<b>Portainer</b><br/><i>Container Mgmt</i>"]
+            PROMETHEUS["<b>Prometheus</b><br/><i>Metrics & Alerts</i>"]
+        end
+    end
 
-  %% Styling (Dark-friendly)
-  classDef usr fill:#0d1117,stroke:#f85149,color:#ffffff;
-  classDef net fill:#0d1117,stroke:#3fb950,color:#c9d1d9;
-  classDef svc fill:#0d1117,stroke:#58a6ff,color:#c9d1d9;
+    subgraph INFRA["🖥️ Infrastructure Foundation"]
+        DOCKER["🐳 <b>Docker Engine</b><br/><i>Container Platform</i>"]
+        HOST["🖥️ <b>Proxmox/Ubuntu</b><br/><i>Hypervisor & OS</i>"]
+    end
 
-  %% Legend compact look
-  classDef legendTitle fill:#0d1117,stroke:#30363d,color:#8b949e,font-size:10px;
-  classDef legendItem  fill:#0d1117,stroke:#30363d,color:#8b949e,font-size:10px;
+    %% Connections
+    USER ==>|HTTPS| NPM
+    NPM -->|Routes| AI
+    NPM -->|Routes| STORAGE
+    NPM -->|Routes| AUTO
+    NPM -->|Routes| MON
+    VPN -.->|Secure| MEDIA
+    
+    AI -.->|API| AUTO
+    STORAGE -.->|Data| PAPERLESS
+    MON ==>|Manages| DOCKER
+    DOCKER ==>|Runs on| HOST
 
-  class USER usr
-  class EDGE net
-  class CORE svc
-  class NPM,VPN net
-  class AI,STO,MED,AUT,MON svc
-  class L0 legendTitle
-  class L1,L2,L3 legendItem
+    %% Styling
+    classDef userStyle fill:#0f172a,stroke:#ef4444,stroke-width:3px,color:#ffffff,font-weight:bold
+    classDef edgeStyle fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#e0e7ff
+    classDef serviceStyle fill:#1e293b,stroke:#8b5cf6,stroke-width:2px,color:#ede9fe
+    classDef infraStyle fill:#111827,stroke:#10b981,stroke-width:2px,color:#d1fae5
+    
+    class USER userStyle
+    class NPM,VPN edgeStyle
+    class OLLAMA,OPENWEBUI,IMMICH,NEXTCLOUD,PLEX,RADARR,N8N,PAPERLESS,PORTAINER,PROMETHEUS serviceStyle
+    class DOCKER,HOST infraStyle
 
 
 
