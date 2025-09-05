@@ -103,8 +103,7 @@ This homelab features a cutting-edge AI stack with **Ollama** for local LLM infe
 
 #### Architecture:
 
-
-%% ------------- AI Stack Detail -------------
+```mermaid
 
 graph TB
 
@@ -153,7 +152,7 @@ graph TB
     class OpenWebUI,Ollama,EdgeTTS,Tika service
     class GPU gpu
     class Prometheus metrics
-
+```
 
 #### Performance Optimization:
 - **GPU Acceleration**: AMD ROCm support with dedicated GPU memory allocation
