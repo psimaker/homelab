@@ -9,59 +9,67 @@ This homelab represents a fully containerized infrastructure with over 40 Docker
 ## 🏗️ Architecture Diagram
 
 ```mermaid
-%% ------------- Global Style -------------
-%% ---------- Main Architecture ----------
-graph TB
-    %% ===========  Networks  ===========
-    subgraph NET["🌐 Networking & Proxy"]
-        direction TB
-        NPM[Nginx Proxy Manager]
-        GLUE[Gluetun VPN]
+%% ---------- Homelab — Hire-Ready Compact Overview ----------
+flowchart LR
+
+    %% User / Entry
+    USER[👤 User / Client]
+
+    %% Edge & Networking
+    subgraph EDGE[🌐 Edge & Networking]
+      direction TB
+      NPM[🔁 Nginx Proxy Manager<br/>TLS termination · Reverse proxy · ACME]
+      VPN[🛡️ Gluetun VPN<br/>WireGuard / OpenVPN]
     end
 
-    %% ===========  AI / ML  ===========
-    subgraph AI["🤖 AI & Machine Learning"]
-        direction TB
-        OLLAMA[Ollama LLM]
-        OPENWEBUI[OpenWebUI]
-        IMMICH_ML[Immich ML]
+    %% Core Services
+    subgraph CORE[🧩 Core Services]
+      direction LR
+      AI[🤖 AI Stack<br/>OLLAMA · OpenWebUI]
+      STO[💾 Storage<br/>Immich · Nextcloud]
+      MED[🎬 Media<br/>Plex · Radarr*]
+      AUT[⚙️ Automation<br/>n8n · Paperless]
+      MON[📊 Observability<br/>Portainer · Prometheus]
     end
 
-    %% ===========  Storage  ===========
-    subgraph STO["💾 Storage & Media"]
-        direction TB
-        IMMICH[Immich Photo]
-        PLEX[Plex Media]
-        NEXTCLOUD[Nextcloud]
+    %% Flows
+    USER -- HTTPS --> NPM
+    NPM -- route --> AI
+    NPM -- route --> STO
+    NPM -- route --> AUT
+    NPM -- route --> MON
+    VPN ==>|secure tunnel| MED
+
+    %% Legend
+    subgraph LEGEND[Legend]
+      direction LR
+      A[---  HTTPS / routed via NPM]:::legendItem
+      B[==   secure tunnel (VPN)]:::legendItem
+      C[*  = media egress via VPN only]:::legendItem
     end
 
-    %% ===========  Automation  ===========
-    subgraph AUT["⚙️ Automation & Workflows"]
-        direction TB
-        N8N[n8n Automation]
-        PAPERLESS[Paperless-ngx]
-        PAPERLESS_AI[Paperless-AI]
-    end
+    %% Styling (GitHub Dark-friendly)
+    classDef usr fill:#0d1117,stroke:#f85149,color:#ffffff,stroke-width:2px;
+    classDef net fill:#0d1117,stroke:#3fb950,color:#c9d1d9,stroke-width:2px;
+    classDef svc fill:#0d1117,stroke:#58a6ff,color:#c9d1d9,stroke-width:2px;
+    classDef legendBox fill:#0d1117,stroke:#30363d,color:#8b949e;
+    classDef legendItem fill:#0d1117,stroke:none,color:#8b949e;
 
-    %% ===========  Monitoring  ===========
-    subgraph MON["📊 Monitoring & Management"]
-        direction TB
-        PORTAINER[Portainer]
-        PROMETHEUS[Prometheus]
-        WATCHTOWER[Watchtower]
-    end
+    class USER usr
+    class EDGE net
+    class CORE svc
+    class NPM,VPN net
+    class AI,STO,MED,AUT,MON svc
+    class LEGEND legendBox
 
-    %% ===========  Links  ===========
-    NPM -.->|"Proxy"| OLLAMA
-    NPM -.->|"Proxy"| OPENWEBUI
-    NPM -.->|"Proxy"| IMMICH
-    NPM -.->|"Proxy"| PLEX
-    NPM -.->|"Proxy"| NEXTCLOUD
-    NPM -.->|"Proxy"| N8N
+    %% Optional: anklickbare Anchors zu Abschnitten in deinem README
+    %% (entsprechende Überschriften/IDs hinzufügen und auskommentieren)
+    %% click AI "#ai-stack" "Jump to AI Stack"
+    %% click STO "#storage" "Jump to Storage"
+    %% click MED "#media" "Jump to Media"
+    %% click AUT "#automation" "Jump to Automation"
+    %% click MON "#observability" "Jump to Observability"
 
-    GLUE -.->|"VPN"| PLEX
-    GLUE -.->|"VPN"| RADARR
-    GLUE -.->|"VPN"| SONARR
 ```
 
 ## 🛠️ Tech Stack
