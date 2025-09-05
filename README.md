@@ -9,46 +9,59 @@ This homelab represents a fully containerized infrastructure with over 40 Docker
 ## 🏗️ Architecture Diagram
 
 ```mermaid
+%% ------------- Global Style -------------
+%% ---------- Main Architecture ----------
 graph TB
-    subgraph "Networking & Proxy"
+    %% ===========  Networks  ===========
+    subgraph NET["🌐 Networking & Proxy"]
+        direction TB
         NPM[Nginx Proxy Manager]
         GLUE[Gluetun VPN]
     end
 
-    subgraph "AI & Machine Learning"
+    %% ===========  AI / ML  ===========
+    subgraph AI["🤖 AI & Machine Learning"]
+        direction TB
         OLLAMA[Ollama LLM]
         OPENWEBUI[OpenWebUI]
         IMMICH_ML[Immich ML]
     end
 
-    subgraph "Storage & Media"
+    %% ===========  Storage  ===========
+    subgraph STO["💾 Storage & Media"]
+        direction TB
         IMMICH[Immich Photo]
         PLEX[Plex Media]
         NEXTCLOUD[Nextcloud]
     end
 
-    subgraph "Automation & Workflows"
+    %% ===========  Automation  ===========
+    subgraph AUT["⚙️ Automation & Workflows"]
+        direction TB
         N8N[n8n Automation]
         PAPERLESS[Paperless-ngx]
         PAPERLESS_AI[Paperless-AI]
     end
 
-    subgraph "Monitoring & Management"
+    %% ===========  Monitoring  ===========
+    subgraph MON["📊 Monitoring & Management"]
+        direction TB
         PORTAINER[Portainer]
         PROMETHEUS[Prometheus]
         WATCHTOWER[Watchtower]
     end
 
-    NPM --> OLLAMA
-    NPM --> OPENWEBUI
-    NPM --> IMMICH
-    NPM --> PLEX
-    NPM --> NEXTCLOUD
-    NPM --> N8N
-    
-    GLUE --> PLEX
-    GLUE --> RADARR
-    GLUE --> SONARR
+    %% ===========  Links  ===========
+    NPM -.->|"Proxy"| OLLAMA
+    NPM -.->|"Proxy"| OPENWEBUI
+    NPM -.->|"Proxy"| IMMICH
+    NPM -.->|"Proxy"| PLEX
+    NPM -.->|"Proxy"| NEXTCLOUD
+    NPM -.->|"Proxy"| N8N
+
+    GLUE -.->|"VPN"| PLEX
+    GLUE -.->|"VPN"| RADARR
+    GLUE -.->|"VPN"| SONARR
 ```
 
 ## 🛠️ Tech Stack
@@ -104,6 +117,7 @@ This homelab features a cutting-edge AI stack with **Ollama** for local LLM infe
 #### Architecture:
 
 ```mermaid
+%% ------------- AI Stack Detail -------------
 
 graph TB
 
