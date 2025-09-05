@@ -59,7 +59,7 @@ graph TB
         end
         subgraph HARDWARE["⚡ Hardware Layer"]
             GPU["🎮 <b>AMD ROCm GPU</b><br/><i>AI Acceleration</i><br/>• 24GB+ VRAM"]
-            HOST["💻 <b>Host System</b><br/><i>Proxmox/Ubuntu</i><br/>• 128GB+ RAM<br/>• 20TB+ Storage"]
+            HOST["💻 <b>Host System</b><br/><i>Debian</i><br/>• 128GB+ RAM<br/>• 20TB+ Storage"]
         end
     end
 
