@@ -102,26 +102,56 @@ This homelab features a cutting-edge AI stack with **Ollama** for local LLM infe
 - **GPU Acceleration**: Full AMD ROCm support with hardware optimization
 
 #### Architecture:
-```mermaid
+
+
+%% ------------- AI Stack Detail -------------
 graph TB
-    User[User Request] --> NPM[Nginx Proxy]
-    NPM --> OpenWebUI[OpenWebUI Interface]
-    OpenWebUI --> Ollama[Ollama LLM Engine]
-    OpenWebUI --> EdgeTTS[Edge-TTS German]
-    OpenWebUI --> Tika[Apache Tika]
-    Ollama --> GPU[AMD ROCm GPU Acceleration]
-    
-    subgraph "AI Services Network"
-        OpenWebUI
-        Ollama
-        EdgeTTS
-        Tika
+    User([👤 User Request])
+
+    subgraph FRONT["🔓 Frontend Layer"]
+        NPM[Nginx Proxy Manager]
+        OpenWebUI[OpenWebUI Interface]
     end
-    
-    Prometheus[Prometheus] -.-> OpenWebUI
-    Prometheus -.-> Ollama
-    Prometheus -.-> EdgeTTS
-```
+
+    subgraph BACK["⚙️ Backend Layer"]
+        Ollama[Ollama LLM Engine]
+        EdgeTTS[Edge-TTS German]
+        Tika[Apache Tika]
+    end
+
+    subgraph ACCEL["🚀 Acceleration"]
+        GPU[AMD ROCm GPU]
+    end
+
+    subgraph METRICS["📈 Observability"]
+        Prometheus[Prometheus]
+    end
+
+    User --> NPM --> OpenWebUI
+    OpenWebUI --> Ollama
+    OpenWebUI --> EdgeTTS
+    OpenWebUI --> Tika
+
+    Ollama -.->|"GPU<br>Acceleration"| GPU
+
+    Prometheus -.->|"Metrics"| OpenWebUI
+    Prometheus -.->|"Metrics"| Ollama
+    Prometheus -.->|"Metrics"| EdgeTTS
+
+    %% --- styling ---
+    classDef default   fill:#0d1117,stroke:#58a6ff,stroke-width:2px,color:#c9d1d9
+    classDef user      fill:#21262d,stroke:#f85149,stroke-width:2px,color:#fff
+    classDef proxy     fill:#161b22,stroke:#3fb950,stroke-width:2px,color:#c9d1d9
+    classDef service   fill:#161b22,stroke:#a371f7,stroke-width:2px,color:#c9d1d9
+    classDef gpu       fill:#161b22,stroke:#d29922,stroke-width:2px,color:#c9d1d9
+    classDef metrics   fill:#161b22,stroke:#ff7b72,stroke-width:2px,color:#c9d1d9
+
+    class User user
+    class NPM proxy
+    class OpenWebUI,Ollama,EdgeTTS,Tika service
+    class GPU gpu
+    class Prometheus metrics
+
 
 #### Performance Optimization:
 - **GPU Acceleration**: AMD ROCm support with dedicated GPU memory allocation
