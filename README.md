@@ -5,7 +5,7 @@ A living, Docker-based lab built out of curiosity. I self-host, break things saf
 ## 📋 Project Overview
 
 This repository orchestrates 40+ containers across networking (Nginx Proxy Manager, VPN), AI/ML (Ollama + OpenWebUI), storage (Immich, Nextcloud), automation (n8n, Paperless-ngx), and monitoring (Prometheus, Portainer, Gotify).  
-Everything is reproducible (Compose), documented, and evolves continuously as I explore better ways to run reliable services at home. I’m currently deepening my Kubernetes skills and mirror production patterns here — health checks, least-privilege networking, and thoughtful runbooks for updates, backups, and restores.
+Everything is reproducible (Compose), documented, and evolves continuously as I explore better ways to run reliable services at home. I’m currently deepening my k8s skills and mirror production patterns here — health checks, least-privilege networking, and thoughtful runbooks for updates, backups, and restores.
 
 
 ## 🏗️ Architecture Diagram
