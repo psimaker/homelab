@@ -105,7 +105,9 @@ This homelab features a cutting-edge AI stack with **Ollama** for local LLM infe
 
 
 %% ------------- AI Stack Detail -------------
+
 graph TB
+
     User([👤 User Request])
 
     subgraph FRONT["🔓 Frontend Layer"]
