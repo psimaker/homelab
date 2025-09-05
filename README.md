@@ -20,64 +20,99 @@ graph TB
     subgraph EDGE["🛡️ Network Edge & Security Layer"]
         NPM["📡 <b>Nginx Proxy Manager</b><br/><i>Reverse Proxy & SSL</i><br/>• Let's Encrypt<br/>• Access Control<br/>• Rate Limiting"]
         VPN["🔐 <b>Gluetun VPN</b><br/><i>Container VPN Client</i><br/>• Multi-Provider<br/>• Kill Switch<br/>• Port Forwarding"]
+        VAULTWARDEN["🔑 <b>Vaultwarden</b><br/><i>Password Manager</i>"]
     end
 
-    subgraph SERVICES["⚡ Application Services"]
+    subgraph SERVICES["⚡ Application Services - 40+ Containers"]
         subgraph AI["🤖 AI/ML Platform"]
-            OLLAMA["<b>Ollama</b><br/><i>Local LLM Runtime</i>"]
-            OPENWEBUI["<b>Open WebUI</b><br/><i>Chat Interface</i>"]
+            OLLAMA["<b>Ollama</b><br/><i>LLM Engine</i><br/>• Llama 3 70B<br/>• DeepSeek R1<br/>• GPU Accelerated"]
+            OPENWEBUI["<b>OpenWebUI</b><br/><i>ChatGPT Alternative</i><br/>• Edge-TTS German<br/>• Apache Tika"]
         end
 
         subgraph STORAGE["💾 Storage & Cloud"]
-            IMMICH["<b>Immich</b><br/><i>Photo Management</i><br/>ML-Powered"]
-            NEXTCLOUD["<b>Nextcloud</b><br/><i>Private Cloud</i><br/>Collaboration"]
+            IMMICH["<b>Immich</b><br/><i>Google Photos Alt</i><br/>• ML Photo Analysis<br/>• Face Recognition"]
+            NEXTCLOUD["<b>Nextcloud</b><br/><i>Private Cloud</i><br/>• File Sync<br/>• Collaboration"]
         end
 
         subgraph MEDIA["🎬 Media Stack"]
-            PLEX["<b>Plex</b><br/><i>Media Server</i>"]
-            RADARR["<b>*arr Stack</b><br/><i>Automation</i>"]
+            PLEX["<b>Plex</b><br/><i>Media Server</i><br/>• Transcoding<br/>• Multi-Device"]
+            ARR["<b>*arr Stack</b><br/><i>Media Automation</i><br/>• Radarr/Sonarr<br/>• Prowlarr"]
         end
 
         subgraph AUTO["⚙️ Automation"]
-            N8N["<b>n8n</b><br/><i>Workflows</i><br/>350+ Integrations"]
-            PAPERLESS["<b>Paperless-ngx</b><br/><i>Document Mgmt</i><br/>OCR & Search"]
+            N8N["<b>n8n</b><br/><i>Workflow Engine</i><br/>• 350+ Integrations<br/>• AI Agents"]
+            PAPERLESS["<b>Paperless-ngx</b><br/><i>Document Mgmt</i><br/>• OCR Processing<br/>• Paperless-AI"]
         end
+    end
 
-        subgraph MON["📊 Monitoring"]
-            PORTAINER["<b>Portainer</b><br/><i>Container Mgmt</i>"]
-            PROMETHEUS["<b>Prometheus</b><br/><i>Metrics & Alerts</i>"]
-        end
+    subgraph PLATFORM["📊 Platform & Monitoring"]
+        PORTAINER["<b>Portainer CE</b><br/><i>Container Management</i><br/>• Stack Deployment<br/>• Resource Monitoring"]
+        PROMETHEUS["<b>Prometheus</b><br/><i>Metrics & Alerting</i><br/>• Service Health<br/>• Performance Data"]
+        WATCHTOWER["<b>Watchtower</b><br/><i>Auto Updates</i>"]
+        GOTIFY["<b>Gotify</b><br/><i>Push Notifications</i>"]
     end
 
     subgraph INFRA["🖥️ Infrastructure Foundation"]
-        DOCKER["🐳 <b>Docker Engine</b><br/><i>Container Platform</i>"]
-        HOST["🖥️ <b>Proxmox/Ubuntu</b><br/><i>Hypervisor & OS</i>"]
+        subgraph DOCKER["🐳 Container Platform"]
+            COMPOSE["<b>Docker Compose</b><br/><i>Orchestration</i>"]
+            ENGINE["<b>Docker Engine</b><br/><i>Container Runtime</i>"]
+        end
+        subgraph HARDWARE["⚡ Hardware Layer"]
+            GPU["🎮 <b>AMD ROCm GPU</b><br/><i>AI Acceleration</i><br/>• 8GB+ VRAM"]
+            HOST["💻 <b>Host System</b><br/><i>Proxmox/Ubuntu</i><br/>• 32GB+ RAM<br/>• 100GB+ Storage"]
+        end
     end
 
-    %% Connections
-    USER ==>|HTTPS| NPM
-    NPM -->|Routes| AI
-    NPM -->|Routes| STORAGE
-    NPM -->|Routes| AUTO
-    NPM -->|Routes| MON
-    VPN -.->|Secure| MEDIA
+    %% Main Connections
+    USER ==>|"HTTPS/443"| NPM
+    NPM -->|"Proxy Routes"| AI
+    NPM -->|"Proxy Routes"| STORAGE
+    NPM -->|"Proxy Routes"| AUTO
+    NPM -->|"Proxy Routes"| PLATFORM
+    NPM -->|"Proxy Routes"| VAULTWARDEN
     
-    AI -.->|API| AUTO
-    STORAGE -.->|Data| PAPERLESS
-    MON ==>|Manages| DOCKER
-    DOCKER ==>|Runs on| HOST
+    %% VPN for Media Stack
+    VPN -.->|"Encrypted Tunnel"| MEDIA
+    
+    %% AI GPU Acceleration
+    OLLAMA ==>|"ROCm Driver"| GPU
+    
+    %% Monitoring Connections
+    PROMETHEUS -.->|"Scrape Metrics"| AI
+    PROMETHEUS -.->|"Scrape Metrics"| STORAGE
+    PROMETHEUS -.->|"Scrape Metrics"| MEDIA
+    PROMETHEUS -.->|"Scrape Metrics"| AUTO
+    
+    %% Platform Management
+    PORTAINER ==>|"Manages"| COMPOSE
+    WATCHTOWER -.->|"Updates"| ENGINE
+    GOTIFY -.->|"Alerts"| PROMETHEUS
+    
+    %% Infrastructure
+    COMPOSE ==>|"Runs on"| ENGINE
+    ENGINE ==>|"Runs on"| HOST
+    GPU -.->|"PCIe Passthrough"| HOST
 
     %% Styling
     classDef userStyle fill:#0f172a,stroke:#ef4444,stroke-width:3px,color:#ffffff,font-weight:bold
     classDef edgeStyle fill:#1e293b,stroke:#3b82f6,stroke-width:2px,color:#e0e7ff
-    classDef serviceStyle fill:#1e293b,stroke:#8b5cf6,stroke-width:2px,color:#ede9fe
+    classDef aiStyle fill:#312e81,stroke:#8b5cf6,stroke-width:2px,color:#ede9fe
+    classDef storageStyle fill:#1e3a5f,stroke:#0ea5e9,stroke-width:2px,color:#e0f2fe
+    classDef mediaStyle fill:#581c87,stroke:#d946ef,stroke-width:2px,color:#fae8ff
+    classDef autoStyle fill:#134e4a,stroke:#14b8a6,stroke-width:2px,color:#ccfbf1
+    classDef monStyle fill:#713f12,stroke:#f59e0b,stroke-width:2px,color:#fef3c7
     classDef infraStyle fill:#111827,stroke:#10b981,stroke-width:2px,color:#d1fae5
+    classDef gpuStyle fill:#7c2d12,stroke:#fb923c,stroke-width:2px,color:#fed7aa
     
     class USER userStyle
-    class NPM,VPN edgeStyle
-    class OLLAMA,OPENWEBUI,IMMICH,NEXTCLOUD,PLEX,RADARR,N8N,PAPERLESS,PORTAINER,PROMETHEUS serviceStyle
-    class DOCKER,HOST infraStyle
-
+    class NPM,VPN,VAULTWARDEN edgeStyle
+    class OLLAMA,OPENWEBUI aiStyle
+    class IMMICH,NEXTCLOUD storageStyle
+    class PLEX,ARR mediaStyle
+    class N8N,PAPERLESS autoStyle
+    class PORTAINER,PROMETHEUS,WATCHTOWER,GOTIFY monStyle
+    class COMPOSE,ENGINE,HOST infraStyle
+    class GPU gpuStyle
 
 
 ```
