@@ -58,8 +58,8 @@ graph TB
             ENGINE["<b>Docker Engine</b><br/><i>Container Runtime</i>"]
         end
         subgraph HARDWARE["⚡ Hardware Layer"]
-            GPU["🎮 <b>AMD ROCm GPU</b><br/><i>AI Acceleration</i><br/>• 8GB+ VRAM"]
-            HOST["💻 <b>Host System</b><br/><i>Proxmox/Ubuntu</i><br/>• 32GB+ RAM<br/>• 100GB+ Storage"]
+            GPU["🎮 <b>AMD ROCm GPU</b><br/><i>AI Acceleration</i><br/>• 24GB+ VRAM"]
+            HOST["💻 <b>Host System</b><br/><i>Proxmox/Ubuntu</i><br/>• 128GB+ RAM<br/>• 20TB+ Storage"]
         end
     end
 
