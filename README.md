@@ -9,66 +9,59 @@ This homelab represents a fully containerized infrastructure with over 40 Docker
 ## 🏗️ Architecture Diagram
 
 ```mermaid
-%% ---------- Homelab — Hire-Ready Compact Overview ----------
+
+%% ---------- Homelab — Compact Overview (GitHub-safe) ----------
 flowchart LR
 
-    %% User / Entry
-    USER[👤 User / Client]
+  %% User / Entry
+  USER([👤 User / Client])
 
-    %% Edge & Networking
-    subgraph EDGE[🌐 Edge & Networking]
-      direction TB
-      NPM[🔁 Nginx Proxy Manager<br/>TLS termination · Reverse proxy · ACME]
-      VPN[🛡️ Gluetun VPN<br/>WireGuard / OpenVPN]
-    end
+  %% Edge & Networking
+  subgraph EDGE[🌐 Edge & Networking]
+    direction TB
+    NPM[🔁 Nginx Proxy Manager<br/>TLS termination · Reverse proxy · ACME]
+    VPN[🛡️ Gluetun VPN<br/>WireGuard / OpenVPN]
+  end
 
-    %% Core Services
-    subgraph CORE[🧩 Core Services]
-      direction LR
-      AI[🤖 AI Stack<br/>OLLAMA · OpenWebUI]
-      STO[💾 Storage<br/>Immich · Nextcloud]
-      MED[🎬 Media<br/>Plex · Radarr*]
-      AUT[⚙️ Automation<br/>n8n · Paperless]
-      MON[📊 Observability<br/>Portainer · Prometheus]
-    end
+  %% Core Services
+  subgraph CORE[🧩 Core Services]
+    direction LR
+    AI[🤖 AI Stack<br/>OLLAMA · OpenWebUI]
+    STO[💾 Storage<br/>Immich · Nextcloud]
+    MED[🎬 Media<br/>Plex · Radarr*]
+    AUT[⚙️ Automation<br/>n8n · Paperless]
+    MON[📊 Observability<br/>Portainer · Prometheus]
+  end
 
-    %% Flows
-    USER -- HTTPS --> NPM
-    NPM -- route --> AI
-    NPM -- route --> STO
-    NPM -- route --> AUT
-    NPM -- route --> MON
-    VPN ==>|secure tunnel| MED
+  %% Flows
+  USER -- HTTPS --> NPM
+  NPM -- route --> AI
+  NPM -- route --> STO
+  NPM -- route --> AUT
+  NPM -- route --> MON
+  VPN -- secure tunnel --> MED
 
-    %% Legend
-    subgraph LEGEND[Legend]
-      direction LR
-      A[---  HTTPS / routed via NPM]:::legendItem
-      B[==   secure tunnel (VPN)]:::legendItem
-      C[*  = media egress via VPN only]:::legendItem
-    end
+  %% Legend (plain text = GitHub-kompatibel)
+  subgraph LEGEND[Legend]
+    direction TB
+    L1[HTTPS = User-Traffic via NPM]
+    L2[secure tunnel = Media egress via VPN]
+    L3[* = Media nur über VPN]
+  end
 
-    %% Styling (GitHub Dark-friendly)
-    classDef usr fill:#0d1117,stroke:#f85149,color:#ffffff,stroke-width:2px;
-    classDef net fill:#0d1117,stroke:#3fb950,color:#c9d1d9,stroke-width:2px;
-    classDef svc fill:#0d1117,stroke:#58a6ff,color:#c9d1d9,stroke-width:2px;
-    classDef legendBox fill:#0d1117,stroke:#30363d,color:#8b949e;
-    classDef legendItem fill:#0d1117,stroke:none,color:#8b949e;
+  %% Styling (Dark-friendly)
+  classDef usr fill:#0d1117,stroke:#f85149,color:#ffffff;
+  classDef net fill:#0d1117,stroke:#3fb950,color:#c9d1d9;
+  classDef svc fill:#0d1117,stroke:#58a6ff,color:#c9d1d9;
+  classDef legendBox fill:#0d1117,stroke:#30363d,color:#8b949e;
 
-    class USER usr
-    class EDGE net
-    class CORE svc
-    class NPM,VPN net
-    class AI,STO,MED,AUT,MON svc
-    class LEGEND legendBox
+  class USER usr
+  class EDGE net
+  class CORE svc
+  class NPM,VPN net
+  class AI,STO,MED,AUT,MON svc
+  class LEGEND legendBox
 
-    %% Optional: anklickbare Anchors zu Abschnitten in deinem README
-    %% (entsprechende Überschriften/IDs hinzufügen und auskommentieren)
-    %% click AI "#ai-stack" "Jump to AI Stack"
-    %% click STO "#storage" "Jump to Storage"
-    %% click MED "#media" "Jump to Media"
-    %% click AUT "#automation" "Jump to Automation"
-    %% click MON "#observability" "Jump to Observability"
 
 ```
 
