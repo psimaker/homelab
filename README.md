@@ -10,7 +10,7 @@ This homelab represents a fully containerized infrastructure with over 40 Docker
 
 ```mermaid
 
-%% ---------- Homelab — Compact Overview (GitHub-safe) ----------
+%% ---------- Homelab — Compact Overview (GitHub-safe, legend bottom-right) ----------
 flowchart LR
 
   %% User / Entry
@@ -41,26 +41,36 @@ flowchart LR
   NPM -- route --> MON
   VPN -- secure tunnel --> MED
 
-  %% Legend (plain text = GitHub-kompatibel)
+  %% Legend (bottom-right, compact)
   subgraph LEGEND[Legend]
     direction TB
+    L0[Legend]
     L1[HTTPS = User-Traffic via NPM]
-    L2[secure tunnel = Media egress via VPN]
+    L2[secure tunnel = Media via VPN]
     L3[* = Media nur über VPN]
   end
+
+  %% Position the legend to the bottom-right (dotted, can be commented out)
+  MED -.-> L0
+  MON -.-> L0
 
   %% Styling (Dark-friendly)
   classDef usr fill:#0d1117,stroke:#f85149,color:#ffffff;
   classDef net fill:#0d1117,stroke:#3fb950,color:#c9d1d9;
   classDef svc fill:#0d1117,stroke:#58a6ff,color:#c9d1d9;
-  classDef legendBox fill:#0d1117,stroke:#30363d,color:#8b949e;
+
+  %% Legend compact look
+  classDef legendTitle fill:#0d1117,stroke:#30363d,color:#8b949e,font-size:10px;
+  classDef legendItem  fill:#0d1117,stroke:#30363d,color:#8b949e,font-size:10px;
 
   class USER usr
   class EDGE net
   class CORE svc
   class NPM,VPN net
   class AI,STO,MED,AUT,MON svc
-  class LEGEND legendBox
+  class L0 legendTitle
+  class L1,L2,L3 legendItem
+
 
 
 ```
