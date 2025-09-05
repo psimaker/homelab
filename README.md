@@ -18,7 +18,7 @@ graph TB
     USER["👤 <b>Users & Clients</b><br/><i>Multi-Platform Access</i>"]
     
     subgraph EDGE["🛡️ Network Edge & Security Layer"]
-        NPM["📡 <b>Nginx Proxy Manager</b><br/><i>Reverse Proxy & SSL</i><br/>• Let's Encrypt<br/>• Access Control<br/>• Rate Limiting"]
+        NPM["📡 <b>Nginx Proxy Manager</b><br/><i>Reverse Proxy & SSL</i><br/>• Let's Encrypt<br/>• Access Control<br/>"]
         VPN["🔐 <b>Gluetun VPN</b><br/><i>Container VPN Client</i><br/>• Multi-Provider<br/>• Kill Switch<br/>• Port Forwarding"]
         VAULTWARDEN["🔑 <b>Vaultwarden</b><br/><i>Password Manager</i>"]
     end
