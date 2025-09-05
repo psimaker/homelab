@@ -1,10 +1,12 @@
 # 🏠 Homelab Infrastructure
 
-A comprehensive Docker-based home laboratory infrastructure showcasing modern DevOps practices, container orchestration, and automated deployment.
+A living, Docker-based lab built out of curiosity. I self-host, break things safely, and write down what I learn — from secure ingress and automation to observability and GPU-accelerated AI workloads.
 
 ## 📋 Project Overview
 
-This homelab represents a fully containerized infrastructure with over 40 Docker containers running various services including AI/ML platforms, document management, media servers, monitoring tools, and automation workflows. The setup demonstrates enterprise-grade DevOps practices in a home environment.
+This repository orchestrates 40+ containers across networking (Nginx Proxy Manager, VPN), AI/ML (Ollama + OpenWebUI), storage (Immich, Nextcloud), automation (n8n, Paperless-ngx), and monitoring (Prometheus, Portainer, Gotify).  
+Everything is reproducible (Compose), documented, and evolves continuously as I explore better ways to run reliable services at home. I’m currently deepening my Kubernetes skills (CKA prep) and mirror production patterns here — health checks, least-privilege networking, and thoughtful runbooks for updates, backups, and restores.
+
 
 ## 🏗️ Architecture Diagram
 
