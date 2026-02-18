@@ -1,0 +1,7 @@
+title = "Homelab gitleaks config"
+
+[allowlist]
+  paths = [
+    ".env.example",
+    ".gitleaks.toml",
+  ]

@@ -1,0 +1,131 @@
+# Storage stack: cloud storage, photo management, document processing
+
+networks:
+  proxy:
+    external: true
+  internal:
+    external: true
+
+services:
+  # --- Nextcloud ---
+  nextcloud:
+    image: nextcloud:29
+    container_name: nextcloud
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./data/nextcloud/html:/var/www/html
+      - ./data/nextcloud/data:/var/www/html/data
+    environment:
+      - MYSQL_HOST=nextcloud-db
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - REDIS_HOST=nextcloud-redis
+      - REDIS_HOST_PASSWORD=${REDIS_PASSWORD}
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      - NEXTCLOUD_TRUSTED_DOMAINS=${DOMAIN}
+    depends_on:
+      - nextcloud-db
+      - nextcloud-redis
+    networks:
+      - proxy
+      - internal
+
+  nextcloud-db:
+    image: mariadb:11
+    container_name: nextcloud-db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - ./data/nextcloud/db:/var/lib/mysql
+    networks:
+      - internal
+
+  nextcloud-redis:
+    image: redis:7-alpine
+    container_name: nextcloud-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - ./data/nextcloud/redis:/data
+    networks:
+      - internal
+
+  # --- Immich ---
+  immich:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich
+    restart: unless-stopped
+    ports:
+      - "2283:2283"
+    volumes:
+      - ${IMMICH_UPLOAD_LOCATION}:/usr/src/app/upload
+    environment:
+      - DB_HOSTNAME=immich-db
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=${IMMICH_DB_PASSWORD:-postgres}
+      - DB_DATABASE_NAME=immich
+      - REDIS_HOSTNAME=immich-redis
+    depends_on:
+      - immich-db
+      - immich-redis
+    networks:
+      - proxy
+      - internal
+
+  immich-db:
+    image: tensorchord/pgvecto-rs:pg16-v0.2.0
+    container_name: immich-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=${IMMICH_DB_PASSWORD:-postgres}
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=immich
+    volumes:
+      - ./data/immich/db:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  immich-redis:
+    image: redis:7-alpine
+    container_name: immich-redis
+    restart: unless-stopped
+    networks:
+      - internal
+
+  # --- Paperless-ngx ---
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:2
+    container_name: paperless
+    restart: unless-stopped
+    ports:
+      - "8010:8000"
+    volumes:
+      - ./data/paperless/data:/usr/src/paperless/data
+      - ./data/paperless/media:/usr/src/paperless/media
+      - ./data/paperless/consume:/usr/src/paperless/consume
+    environment:
+      - PAPERLESS_SECRET_KEY=${PAPERLESS_SECRET_KEY}
+      - PAPERLESS_OCR_LANGUAGE=${PAPERLESS_OCR_LANGUAGE:-deu+eng}
+      - PAPERLESS_REDIS=redis://paperless-redis:6379
+      - USERMAP_UID=${PUID}
+      - USERMAP_GID=${PGID}
+    depends_on:
+      - paperless-redis
+    networks:
+      - proxy
+      - internal
+
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: paperless-redis
+    restart: unless-stopped
+    networks:
+      - internal
