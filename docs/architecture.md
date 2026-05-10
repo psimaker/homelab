@@ -21,19 +21,16 @@ being replatformed.
 flowchart LR
   subgraph Internet
     user[End user]
-    cf[Cloudflare<br/>edge + DNS]
+    cf["Cloudflare<br/>edge + DNS"]
   end
-
-  subgraph Hetzner_DE[Hetzner — Falkenstein DE]
-    edge[edge<br/>k3s server, control-plane<br/>Tier-1 ingress]
+  subgraph Hetzner_DE["Hetzner — Falkenstein DE"]
+    edge["edge<br/>k3s server, control-plane<br/>Tier-1 ingress"]
   end
-
-  subgraph Home_CH[airbase — Zurich CH]
-    agent[airbase<br/>k3s agent + Docker host<br/>Tier-1 worker + Tier-2 dataplane]
+  subgraph Home_CH["airbase — Zurich CH"]
+    agent["airbase<br/>k3s agent + Docker host<br/>Tier-1 worker + Tier-2 dataplane"]
   end
-
   user --> cf --> edge
-  edge <-. Tailscale mesh<br/>100.64.0.0/10 .-> agent
+  edge <-. "Tailscale mesh<br/>100.64.0.0/10" .-> agent
 ```
 
 ## Table of contents
