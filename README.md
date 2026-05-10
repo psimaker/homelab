@@ -4,9 +4,10 @@ A two-tier home infrastructure: a Kubernetes platform for new workloads, a
 Docker dataplane for the stateful giants. Hosts [**loogi.ch**](https://loogi.ch)
 in production.
 
-[![lint](https://git.psimaker.org/umut.erdem/homelab/actions/workflows/lint.yml/badge.svg)](https://git.psimaker.org/umut.erdem/homelab/actions/workflows/lint.yml)
-[![tofu-plan](https://git.psimaker.org/umut.erdem/homelab/actions/workflows/tofu-plan.yml/badge.svg)](https://git.psimaker.org/umut.erdem/homelab/actions/workflows/tofu-plan.yml)
-[![restore-test](https://git.psimaker.org/umut.erdem/homelab/actions/workflows/restore-test.yml/badge.svg)](https://git.psimaker.org/umut.erdem/homelab/actions/workflows/restore-test.yml)
+[![Kubernetes](https://img.shields.io/badge/k3s-1.31-FFC61C?logo=kubernetes&logoColor=white)](docs/architecture.md)
+[![GitOps](https://img.shields.io/badge/GitOps-Flux-316CE6?logo=fluxcd&logoColor=white)](docs/adr/0002-flux-vs-argocd.md)
+[![IaC](https://img.shields.io/badge/IaC-OpenTofu-FFDA18?logo=opentofu&logoColor=black)](terraform/)
+[![CNI](https://img.shields.io/badge/CNI-Cilium-F8C517?logo=cilium&logoColor=black)](docs/adr/0011-cilium-as-cni.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > *I automate things so I can spend more time breaking other things.*
