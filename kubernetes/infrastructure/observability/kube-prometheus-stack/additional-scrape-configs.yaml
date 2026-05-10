@@ -1,0 +1,73 @@
+---
+# Additional scrape configs in raw Prometheus syntax. ServiceMonitors don't
+# fit some sources well — for instance scraping a Tier-2 (Docker) host's
+# node_exporter via the tailnet has no Service/Endpoints to monitor.
+#
+# This Secret is referenced by `prometheus.prometheusSpec.additionalScrapeConfigs`
+# in values.yaml.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: prometheus-additional-scrape
+  namespace: observability
+  labels:
+    app.kubernetes.io/managed-by: flux
+type: Opaque
+stringData:
+  additional-scrape-configs.yaml: |
+    # airbase node_exporter — Tier-2 Docker host, reachable via tailnet only
+    - job_name: airbase-node-exporter
+      scrape_interval: 30s
+      static_configs:
+        - targets: ['100.64.0.2:9100']
+          labels:
+            instance: airbase
+            tier: tier-2
+            environment: production
+
+    # airbase cAdvisor for Docker container metrics
+    - job_name: airbase-cadvisor
+      scrape_interval: 30s
+      static_configs:
+        - targets: ['100.64.0.2:9101']
+          labels:
+            instance: airbase
+            tier: tier-2
+
+    # Nginx Proxy Manager (Tier-2 reverse proxy) — exporter on host
+    - job_name: airbase-npm-exporter
+      scrape_interval: 1m
+      static_configs:
+        - targets: ['100.64.0.2:9113']
+          labels:
+            instance: airbase
+            service: nginx-proxy-manager
+
+    # AdGuard Home on airbase — planned (see compose/adguard/, ADR 0001).
+    # Uncomment when the compose stack is deployed and the ad-guard exporter
+    # is exposing :9617 on the host's tailnet interface.
+    # - job_name: airbase-adguard
+    #   scrape_interval: 1m
+    #   static_configs:
+    #     - targets: ['100.64.0.2:9617']
+    #       labels:
+    #         instance: airbase
+    #         service: adguardhome
+
+    # Blackbox external probe — public LOOGI healthcheck
+    - job_name: blackbox-loogi
+      scrape_interval: 60s
+      metrics_path: /probe
+      params:
+        module: [http_2xx]
+      static_configs:
+        - targets:
+            - https://loogi.ch/healthz
+            - https://id.psimaker.org/healthz
+      relabel_configs:
+        - source_labels: [__address__]
+          target_label: __param_target
+        - source_labels: [__param_target]
+          target_label: instance
+        - target_label: __address__
+          replacement: blackbox-exporter.observability.svc:9115

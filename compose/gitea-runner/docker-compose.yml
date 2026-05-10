@@ -1,0 +1,25 @@
+name: gitea-runner
+
+services:
+  runner:
+    # renovate: datasource=docker
+    image: gitea/act_runner:0.6
+    container_name: gitea-runner
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      GITEA_INSTANCE_URL: ${GITEA_INSTANCE_URL}
+      GITEA_RUNNER_REGISTRATION_TOKEN: ${GITEA_RUNNER_REGISTRATION_TOKEN}
+      GITEA_RUNNER_NAME: ${GITEA_RUNNER_NAME}
+      CONFIG_FILE: /config/config.yaml
+    volumes:
+      - ./data:/data
+      - ./config.yaml:/config/config.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - gitea-net
+
+networks:
+  gitea-net:
+    external: true
+    name: gitea-net

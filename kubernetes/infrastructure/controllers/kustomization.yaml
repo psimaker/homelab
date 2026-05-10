@@ -1,0 +1,18 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Order is suggestive only — Flux/kustomize render in dependency-graph order
+# anyway. The list below mirrors a reasonable mental model:
+#   1. CNI must come up first (Cilium)
+#   2. Then ingress (Traefik) and certificates (cert-manager)
+#   3. Then secret tooling (External-Secrets)
+#   4. Then the LB/IP and tunnel layers (kube-vip, cloudflared)
+#   5. Then everything else (Renovate)
+resources:
+  - cilium
+  - traefik
+  - cert-manager
+  - external-secrets
+  - kube-vip
+  - cloudflared
+  - renovate

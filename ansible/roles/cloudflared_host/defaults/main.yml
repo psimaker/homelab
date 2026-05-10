@@ -1,0 +1,19 @@
+---
+cloudflared_apt_repo_url: "https://pkg.cloudflare.com/cloudflared"
+cloudflared_apt_repo_key_url: "https://pkg.cloudflare.com/cloudflare-main.gpg"
+cloudflared_apt_repo_keyring: /etc/apt/keyrings/cloudflare-main.gpg
+
+cloudflared_packages:
+  - cloudflared
+
+cloudflared_service_user: cloudflared
+cloudflared_config_dir: /etc/cloudflared
+
+# Token from SOPS — `cloudflared service install $TOKEN` would normally do
+# this, but we manage the systemd unit ourselves so the token can be
+# rotated without re-running the installer.
+cloudflared_tunnel_token_var: cloudflared_tunnel_token
+
+# Off by default. The in-cluster cloudflared pod is the primary path; this
+# host-level fallback only runs on edge.
+cloudflared_host_install: false

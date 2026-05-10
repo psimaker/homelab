@@ -1,0 +1,38 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: tinyauth
+  namespace: identity
+  annotations:
+    homelab.psimaker.org/exposure: tailnet-only
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`auth.tailnet`)
+      kind: Rule
+      services:
+        - name: tinyauth
+          port: 3000
+      middlewares:
+        - name: secure-headers
+          namespace: traefik
+  tls:
+    secretName: tinyauth-tls
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tinyauth-tls
+  namespace: identity
+spec:
+  secretName: tinyauth-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: auth.tailnet
+  dnsNames:
+    - auth.tailnet
+  duration: 2160h
+  renewBefore: 360h

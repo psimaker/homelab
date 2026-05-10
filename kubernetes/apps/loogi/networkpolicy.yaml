@@ -1,0 +1,259 @@
+# LOOGI NetworkPolicy.
+#
+# Policy model: default-deny everything in the namespace, then allow only
+# the explicit flows we need. This is the access boundary that lets us run
+# Valkey without auth — the cache is reachable only from SearXNG pods, and
+# nothing else in the cluster can speak to it.
+#
+# Egress note: SearXNG fetches results from upstream search engines (Google,
+# Brave, DuckDuckGo, etc.) over HTTPS. We do not enumerate those — there are
+# dozens of them across image/video/news engines and the list changes with
+# upstream config. Egress to any 0.0.0.0/0 on TCP 443 is allowed.
+# DNS goes to kube-dns; the Cilium identity for kube-dns lives in
+# kube-system.
+
+# 1) default-deny ingress + egress in the loogi namespace.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+
+# 2) Allow Traefik (in the `traefik` namespace) to reach SearXNG pods on
+#    8080. The selector matches the actual ingress controller pods rather
+#    than the whole namespace so a co-tenant in `traefik` can't piggyback.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-traefik-to-searxng
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: loogi
+      app.kubernetes.io/component: searxng
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8080
+
+# 3) Allow Prometheus (kube-prometheus-stack in the observability namespace)
+#    to scrape the SearXNG pods. SearXNG's metrics endpoint is gated by
+#    `general.enable_metrics`; we keep it off in settings.yml and rely on
+#    Traefik's exposed metrics for SLOs (see slos.yaml). This rule still
+#    exists so that if/when we flip metrics on, the path is open.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-to-searxng
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: loogi
+      app.kubernetes.io/component: searxng
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 8080
+
+# 4) Allow Prometheus to scrape Valkey's metrics sidecar (see valkey-values.yaml,
+#    metrics.enabled). The Bitnami chart exposes 9121 on the metrics container.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-prometheus-to-valkey
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: observability
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: prometheus
+      ports:
+        - protocol: TCP
+          port: 9121
+
+# 5) Allow SearXNG → Valkey on 6379. The matchLabels target the chart-applied
+#    pod labels (Bitnami's `app.kubernetes.io/name: valkey`).
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-searxng-to-valkey
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: loogi
+      app.kubernetes.io/component: searxng
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: valkey
+      ports:
+        - protocol: TCP
+          port: 6379
+
+# 6) Allow SearXNG → kube-dns. UDP/53 is the hot path; TCP/53 covers
+#    fallback for >512-byte responses.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-searxng-to-dns
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: loogi
+      app.kubernetes.io/component: searxng
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+# 7) Allow SearXNG → upstream HTTPS. Engines fan out to dozens of public
+#    services; we allow 443/TCP egress to any external destination but
+#    explicitly EXCLUDE the cluster CIDRs so the loophole can't be used to
+#    reach internal services. Cilium's CIDR exclusions handle this.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-searxng-to-internet-https
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: loogi
+      app.kubernetes.io/component: searxng
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8        # cluster + private
+              - 172.16.0.0/12     # private
+              - 192.168.0.0/16    # private
+              - 169.254.0.0/16    # link-local
+              - 100.64.0.0/10     # Tailnet — outside loogi's blast radius
+      ports:
+        - protocol: TCP
+          port: 443
+        # 80 for HTTP redirects from upstream engines that haven't moved to
+        # HTTPS-only. SearXNG follows them.
+        - protocol: TCP
+          port: 80
+
+# 8) Allow Valkey → kube-dns. The chart's liveness probe and any internal
+#    resolution Valkey might do need this. Otherwise Valkey is allowed no
+#    egress.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-valkey-to-dns
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: valkey
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

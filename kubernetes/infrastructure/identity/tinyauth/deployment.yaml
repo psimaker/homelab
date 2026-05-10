@@ -1,0 +1,92 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tinyauth
+  namespace: identity
+  labels:
+    app.kubernetes.io/name: tinyauth
+    app.kubernetes.io/managed-by: flux
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: tinyauth
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: tinyauth
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: tinyauth
+          # renovate: datasource=docker depName=ghcr.io/steveiliop56/tinyauth
+          image: ghcr.io/steveiliop56/tinyauth:v3.0.4
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: PORT
+              value: "3000"
+            - name: APP_URL
+              value: https://auth.tailnet
+            - name: COOKIE_SECURE
+              value: "true"
+            - name: SESSION_EXPIRY
+              value: "604800"  # 7d
+            - name: LOG_LEVEL
+              value: info
+            # OIDC delegation to Pocket-ID
+            - name: PROVIDERS_GENERIC_NAME
+              value: Pocket-ID
+            - name: PROVIDERS_GENERIC_AUTH_URL
+              value: https://id.psimaker.org/authorize
+            - name: PROVIDERS_GENERIC_TOKEN_URL
+              value: https://id.psimaker.org/api/oidc/token
+            - name: PROVIDERS_GENERIC_USER_INFO_URL
+              value: https://id.psimaker.org/api/oidc/userinfo
+            - name: PROVIDERS_GENERIC_SCOPES
+              value: openid,email,profile,groups
+            - name: USERS_LOGIN_TIMEOUT
+              value: "300"
+            - name: GENERIC_USER_PATH
+              value: email
+          envFrom:
+            - secretRef:
+                name: tinyauth-secrets
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

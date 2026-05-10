@@ -1,0 +1,197 @@
+# LOOGI SearXNG settings — full settings.yml as a ConfigMap.
+#
+# Generated from /data/loogi/searxng/settings.yml on airbase. Source of truth
+# is the loogi repo at git.psimaker.org/umut.erdem/loogi (specifically
+# searxng/settings.yml in that repo). When the upstream loogi repo's
+# settings.yml changes, this ConfigMap must be updated in the same PR — we
+# keep them in lockstep instead of mounting a build-time artefact, because
+# Kubernetes ConfigMap diffs are cleaner than re-baking the image just to
+# shuffle a setting.
+#
+# Sanitising notes:
+#   - server.secret_key stays as the placeholder; the runtime value comes
+#     from the SEARXNG_SECRET env var (loogi-secret), which the upstream
+#     entrypoint reads and substitutes.
+#   - valkey.url updated for k3s service DNS:
+#       valkey-master.loogi.svc.cluster.local:6379
+#     replacing the Compose-only `valkey:6379` short name.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loogi-settings
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+data:
+  settings.yml: |
+    # LOOGI — SearXNG settings (k3s deploy).
+    # Mirror of git.psimaker.org/umut.erdem/loogi:searxng/settings.yml with
+    # only the Valkey URL adjusted to point at the in-cluster service DNS.
+    # Deltas from upstream defaults via use_default_settings (Deep-Merge).
+    use_default_settings:
+      engines:
+        keep_only:
+          # general
+          - google
+          - brave
+          - duckduckgo
+          - mojeek
+          - mwmbl
+          - startpage
+          - qwant
+          # wikipedia bewusst NICHT in general — siehe ADR 0015. Wikipedia
+          # bleibt via wiki-Tab (wikidata, wiktionary, wikibooks, ...) und ueber
+          # die Listen-Treffer der grossen Engines erreichbar.
+
+          # images
+          - google images
+          - brave.images
+          - duckduckgo images
+          - qwant images
+          - mojeek images
+          - startpage images
+
+          # videos
+          - youtube
+          - vimeo
+          - peertube
+          - brave.videos
+          - duckduckgo videos
+          - qwant videos
+
+          # news
+          - google news
+          - brave.news
+          - duckduckgo news
+          - qwant news
+          - bing news
+          - yahoo news
+          - mojeek news
+          - startpage news
+          - reuters
+          - wikinews
+
+          # map
+          - openstreetmap
+          - apple maps
+
+          # music
+          - bandcamp
+          - soundcloud
+
+          # it / dev
+          - github
+          - github code
+          - gitlab
+          - codeberg
+          - stackoverflow
+          - mdn
+          - hackernews
+
+          # science
+          - arxiv
+          - google scholar
+          - pubmed
+          - crossref
+          - semantic scholar
+
+          # files
+          - annas archive
+
+          # wiki / reference
+          - wikidata
+          - wiktionary
+          - wikibooks
+          - wikiquote
+          - wikisource
+
+          # instant answers
+          - duckduckgo weather
+
+    general:
+      instance_name: "LOOGI"
+      privacypolicy_url: false
+      donation_url: false
+      contact_url: false
+      enable_metrics: false
+
+    # brand-Block bewusst nicht ueberschrieben: das LOOGI-Theme verlinkt nirgends
+    # auf brand.issue_url / brand.public_instances / brand.wiki_url / brand.docs_url,
+    # also schaden die SearXNG-Default-Werte nicht. Eigener Code: GitHub-Link auf
+    # https://github.com/psimaker, Kontakt mailto:umut.erdem@protonmail.com.
+
+    search:
+      safe_search: 0
+      autocomplete: "duckduckgo"
+      autocomplete_min: 3
+      default_lang: "auto"
+      ban_time_on_fail: 5
+      max_ban_time_on_fail: 120
+      # Favicons fuer Suchergebnisse — DuckDuckGo Resolver (privacy-respecting,
+      # konsistent mit autocomplete). Cache liegt in Valkey, wiederholte Domains
+      # treffen den Resolver nur einmal.
+      favicon_resolver: "duckduckgo"
+      formats:
+        - html
+        - json
+        - rss
+
+    server:
+      port: 8080
+      bind_address: "0.0.0.0"
+      base_url: "https://loogi.ch/"
+      secret_key: "ultrasecretkey"  # via SEARXNG_SECRET env-var ueberschrieben
+      limiter: true
+      public_instance: true
+      image_proxy: true
+      http_protocol_version: "1.1"
+      method: "GET"
+      default_http_headers:
+        X-Content-Type-Options: nosniff
+        X-Download-Options: noopen
+        X-Robots-Tag: noindex, nofollow
+        Referrer-Policy: no-referrer
+
+    ui:
+      default_theme: loogi
+      query_in_title: true
+      infinite_scroll: false
+      center_alignment: false
+      default_locale: ""           # auto-detect via Accept-Language
+      search_on_category_select: true
+      hotkeys: default
+      url_formatting: pretty
+
+    # k3s service DNS — Bitnami valkey chart exposes the primary as
+    # `<release>-master`. Release name is `valkey`, namespace is `loogi`.
+    valkey:
+      url: valkey://valkey-master.loogi.svc.cluster.local:6379/0
+
+    outgoing:
+      request_timeout: 3.0
+      max_request_timeout: 10.0
+      pool_connections: 100
+      pool_maxsize: 20
+      enable_http2: true
+
+    categories_as_tabs:
+      general:
+      images:
+      videos:
+      news:
+      map:
+      music:
+      it:
+      science:
+      files:
+
+    enabled_plugins:
+      - "Hash plugin"
+      - "Self Information"
+      - "Tracker URL remover"
+      - "Unit converter plugin"
+      - "Open Access DOI rewrite"
+      - "Hostnames plugin"

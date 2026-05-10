@@ -1,0 +1,22 @@
+# Bitnami chart repository — used here only for the `valkey` chart.
+#
+# Bitnami's chart catalogue moved to OCI in 2024. We use the OCI registry
+# directly via a HelmRepository of type `oci`. This avoids the `index.yaml`
+# poll cycle and matches how Flux v2.4 ships things.
+#
+# Renovate tracks bitnami chart versions through the chart pin in
+# helm-release.yaml; nothing version-pinned here.
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: bitnami
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  type: oci
+  interval: 24h
+  url: oci://registry-1.docker.io/bitnamicharts

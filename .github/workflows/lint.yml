@@ -1,0 +1,47 @@
+---
+name: lint (mirror, no-op)
+
+# Stub workflow on the GitHub mirror. The real linting runs on Gitea — see
+# .github/workflows/README.md and .gitea/workflows/lint.yml.
+#
+# This job exists so the Actions tab on the mirror is not empty. It runs
+# yamllint as a sanity check but does NOT gate anything (no required-status
+# attached, no branch protection wiring on the mirror).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+
+  yamllint:
+    name: yamllint (advisory only)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install yamllint
+        run: |
+          # renovate: datasource=pypi depName=yamllint
+          YAMLLINT_VERSION=1.35.1
+          pip install --no-cache-dir "yamllint==${YAMLLINT_VERSION}"
+
+      - name: yamllint .
+        run: yamllint -c .yamllint.yaml .
+        continue-on-error: true   # advisory; real gating lives on Gitea
+
+      - name: Pointer to canonical CI
+        run: |
+          echo "::notice::Real CI runs on https://git.psimaker.org/umut.erdem/homelab"
+          echo "::notice::This mirror workflow is informational; nothing here gates merges."

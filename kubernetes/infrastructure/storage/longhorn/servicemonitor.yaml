@@ -1,0 +1,23 @@
+---
+# Longhorn manager metrics. The chart already creates ServiceMonitors when
+# `metrics.serviceMonitor.enabled=true`; this is a defensive backstop in case
+# a chart upgrade renames or drops them. Idempotent — duplicates are ignored
+# by the Prometheus operator.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: longhorn-manager-extra
+  namespace: longhorn-system
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: longhorn-manager
+  endpoints:
+    - port: manager
+      interval: 30s
+      path: /metrics
+  namespaceSelector:
+    matchNames:
+      - longhorn-system

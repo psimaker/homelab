@@ -1,0 +1,110 @@
+# Longhorn 1.7.x values.
+#
+# Defaults of note:
+# - defaultClassReplicaCount: 1
+#   We have 2 nodes (edge in Falkenstein, airbase in Zurich). Synchronous
+#   replication across a 25 ms RTT WAN tail is murder on write latency.
+#   Cross-DC replication would be ADR-worthy: the trade-off is "do we want
+#   workloads tolerant to losing the home node, knowing every fsync now
+#   round-trips DE↔CH?". Today the answer is no. Stateful workloads we care
+#   about live on airbase; a Hetzner outage takes their replicas offline,
+#   which is acceptable. See an eventual docs/adr/0014-longhorn-replicas.md
+#   for the long-form if/when the homelab grows a third node.
+# - defaultDataPath: /var/lib/longhorn — same on both nodes by Ansible.
+# - createDefaultDiskLabeledNodes: true — only nodes with the
+#   `node.longhorn.io/create-default-disk: "true"` label receive a disk.
+#   This way `edge` can be excluded if we tighten the node-role split later.
+#
+# Backup target: Hetzner Object Storage (S3-compat). Endpoint+credentials in
+# backup-target-secret.sops.yaml. Bucket layout under
+# `s3://psimaker-homelab-longhorn-backup/longhorn/`.
+
+defaultSettings:
+  defaultDataPath: /var/lib/longhorn
+  defaultDataLocality: best-effort
+  replicaSoftAntiAffinity: true   # tolerate single-node clusters
+  replicaAutoBalance: best-effort
+  storageOverProvisioningPercentage: 100
+  storageMinimalAvailablePercentage: 15
+  upgradeChecker: false
+  defaultReplicaCount: 1
+  guaranteedEngineManagerCPU: 0   # don't reserve CPU on a 2-vCPU node
+  guaranteedReplicaManagerCPU: 0
+  createDefaultDiskLabeledNodes: true
+  defaultLonghornStaticStorageClass: longhorn-static
+  taintToleration: "node-role.kubernetes.io/control-plane:NoSchedule"
+  systemManagedComponentsNodeSelector: ""
+  priorityClass: system-cluster-critical
+  autoDeletePodWhenVolumeDetachedUnexpectedly: true
+  disableSchedulingOnCordonedNode: true
+  allowVolumeCreationWithDegradedAvailability: true
+  autoCleanupSystemGeneratedSnapshot: true
+  concurrentAutomaticEngineUpgradePerNodeLimit: 1
+  backupTarget: s3://psimaker-homelab-longhorn-backup@eu-central-1/
+  backupTargetCredentialSecret: longhorn-backup-target
+  storageNetwork: ""
+  snapshotDataIntegrity: enabled
+  removeSnapshotsDuringFilesystemTrim: enabled
+  fastReplicaRebuildEnabled: true
+  replicaFileSyncHttpClientTimeout: 30
+  logLevel: Info
+
+persistence:
+  defaultClass: true
+  defaultClassReplicaCount: 1
+  defaultFsType: ext4
+  reclaimPolicy: Retain
+  recurringJobSelector:
+    enable: true
+    jobList:
+      - name: snapshot-6h
+        isGroup: false
+      - name: backup-daily
+        isGroup: false
+
+ingress:
+  enabled: false  # we expose the UI via Traefik IngressRoute below
+
+service:
+  ui:
+    type: ClusterIP
+
+# Auth for the UI is provided by Traefik + Tinyauth at the IngressRoute layer.
+# Longhorn itself ships with no UI auth — never expose it without ForwardAuth.
+
+metrics:
+  serviceMonitor:
+    enabled: true
+    additionalLabels:
+      release: kube-prometheus-stack
+    interval: 30s
+
+# Longhorn manager + driver: run on every node that has the disk label.
+nodeSelector: {}
+tolerations: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    memory: 1Gi
+
+# Image pinning — Renovate tracks via the chart, but explicit pins survive
+# air-gapped rebuilds.
+image:
+  longhorn:
+    manager:
+      tag: v1.7.2
+    engine:
+      tag: v1.7.2
+    instanceManager:
+      tag: v1.7.2
+    shareManager:
+      tag: v1.7.2
+    backingImageManager:
+      tag: v1.7.2
+    supportBundleKit:
+      tag: v0.0.45
+    ui:
+      tag: v1.7.2

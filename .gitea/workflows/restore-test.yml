@@ -1,0 +1,112 @@
+---
+name: restore-test
+
+# Weekly automated restore-test. The CI runner reaches airbase via the
+# Tailscale interface (it's a member of the tailnet), runs
+# scripts/restic-restore-test.sh on-host, and parses the exit code.
+#
+# Failure paths:
+#   - exit 0   passes silently (success metric updated)
+#   - exit 1   diff is non-empty -> page on ntfy `homelab-critical`
+#   - exit 2   infra error (repo unreachable, no snapshots) -> warn on ntfy
+#
+# Last 8 weeks of run logs are retained as workflow artefacts.
+
+on:
+  schedule:
+    - cron: "0 6 * * 0"      # 06:00 UTC every Sunday
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: "Force a specific restic repo (hostbox|b2). Empty = random."
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  RESTIC_PASSWORD: ${{ secrets.RESTIC_PASSWORD }}
+  HOSTBOX_REPO: ${{ secrets.RESTIC_HOSTBOX_REPO }}
+  B2_REPO: ${{ secrets.RESTIC_B2_REPO }}
+  B2_ACCOUNT_ID: ${{ secrets.B2_ACCOUNT_ID }}
+  B2_ACCOUNT_KEY: ${{ secrets.B2_ACCOUNT_KEY }}
+  RESTIC_REPO_NAME: ${{ inputs.repo }}
+
+jobs:
+
+  restore-test:
+    name: restic restore-test
+    runs-on: self-hosted
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}
+
+      - name: Probe airbase reachability over tailnet
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes \
+              -o StrictHostKeyChecking=accept-new \
+              umo@airbase 'true' \
+            && echo "airbase reachable"
+
+      - name: Run restic-restore-test.sh on airbase
+        id: run
+        run: |
+          set -euo pipefail
+          # Stream both env and the script over SSH; capture exit code.
+          set +e
+          ssh -o BatchMode=yes \
+              -o StrictHostKeyChecking=accept-new \
+              -o SendEnv=RESTIC_PASSWORD \
+              -o SendEnv=HOSTBOX_REPO \
+              -o SendEnv=B2_REPO \
+              -o SendEnv=B2_ACCOUNT_ID \
+              -o SendEnv=B2_ACCOUNT_KEY \
+              -o SendEnv=RESTIC_REPO_NAME \
+              umo@airbase \
+              "sudo /usr/local/lib/homelab/restic-restore-test.sh" \
+              | tee restore-test.log
+          rc=$?
+          set -e
+          echo "rc=${rc}" >> "${GITHUB_OUTPUT}"
+          exit "${rc}"
+
+      - name: Upload run log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: restore-test-${{ github.run_id }}
+          path: restore-test.log
+          retention-days: 60        # ≈ 8 weeks
+
+      - name: Page on diff failure
+        if: failure() && steps.run.outputs.rc == '1'
+        env:
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+        run: |
+          curl -sSf \
+            -H "Authorization: Bearer ${NTFY_TOKEN}" \
+            -H "Title: restore-test FAILED — DATA CORRUPTION SUSPECTED" \
+            -H "Priority: urgent" \
+            -H "Tags: rotating_light,bomb" \
+            -d "Restore-test diff is non-empty. See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            https://ntfy.psimaker.org/homelab-critical
+
+      - name: Warn on infra failure
+        if: failure() && steps.run.outputs.rc == '2'
+        env:
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+        run: |
+          curl -sSf \
+            -H "Authorization: Bearer ${NTFY_TOKEN}" \
+            -H "Title: restore-test infra error" \
+            -H "Tags: warning,backup" \
+            -d "Restore-test could not run. See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            https://ntfy.psimaker.org/homelab-warnings

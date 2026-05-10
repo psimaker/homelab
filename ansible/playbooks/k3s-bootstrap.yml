@@ -1,0 +1,23 @@
+---
+# k3s bootstrap, two-phase:
+#   1. Install the server on edge. Read its node-token if absent from SOPS.
+#   2. Install the agent on airbase, joining edge over Tailscale.
+#
+# After this playbook completes, the operator-side kubeconfig at
+# k3s_kubeconfig_local_path is ready for `kubectl` and `flux bootstrap`.
+
+- name: K3s server on edge
+  hosts: edge
+  become: true
+  gather_facts: true
+  roles:
+    - role: k3s_server
+      tags: [k3s, k3s_server]
+
+- name: K3s agent on airbase
+  hosts: home_dataplane
+  become: true
+  gather_facts: true
+  roles:
+    - role: k3s_agent
+      tags: [k3s, k3s_agent]

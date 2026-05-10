@@ -1,0 +1,15 @@
+# kubernetes/apps/kustomization.yaml — Tier-1 app aggregator.
+#
+# This is a *kustomize* Kustomization (kustomize.config.k8s.io/v1beta1), not a
+# Flux Kustomization. The Flux Kustomization that points at this directory
+# lives in kubernetes/flux-system/gotk-sync.yaml and depends on the
+# infrastructure layer being healthy first.
+#
+# Adding a new Tier-1 workload: drop it into kubernetes/apps/<name>/, make
+# sure that directory has its own kustomization.yaml that lists every resource
+# in it, then append the directory name below.
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - loogi

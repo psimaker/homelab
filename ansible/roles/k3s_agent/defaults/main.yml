@@ -1,0 +1,11 @@
+---
+k3s_install_script_url: "https://get.k3s.io"
+k3s_install_script_path: /usr/local/bin/k3s-install.sh
+
+k3s_config_dir: /etc/rancher/k3s
+k3s_config_path: "{{ k3s_config_dir }}/config.yaml"
+
+# Defaults overridable per host via inventory/group_vars/home_dataplane.yml.
+k3s_agent_node_ip: "{{ tailscale_ip }}"
+k3s_agent_external_ip: "{{ tailscale_ip }}"
+k3s_agent_extra_args: []

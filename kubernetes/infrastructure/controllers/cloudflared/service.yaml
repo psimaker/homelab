@@ -1,0 +1,20 @@
+---
+# ClusterIP for the cloudflared metrics endpoint. The tunnel itself does not
+# need a Service — cloudflared dials *out* to Cloudflare's edge. The service
+# is here purely for the ServiceMonitor to scrape /metrics.
+apiVersion: v1
+kind: Service
+metadata:
+  name: cloudflared
+  namespace: cloudflared
+  labels:
+    app.kubernetes.io/name: cloudflared
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cloudflared
+  ports:
+    - name: metrics
+      port: 2000
+      targetPort: metrics
+      protocol: TCP

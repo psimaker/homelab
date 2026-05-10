@@ -1,0 +1,20 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: identity
+resources:
+  - helm-repository.yaml
+  - helmrelease.yaml
+  - ingressroute.yaml
+  - secret.sops.yaml
+configMapGenerator:
+  - name: headscale-helm-values
+    files:
+      - values.yaml
+  - name: headscale-acl
+    files:
+      - acl.hujson
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    app.kubernetes.io/managed-by: flux

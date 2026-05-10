@@ -1,0 +1,116 @@
+// Headscale ACL policy — HuJSON (Tailscale's commented-JSON dialect).
+//
+// Written as a code-reviewable artefact, NOT clicked together in a UI. The
+// model deliberately keeps groups + tags small; expanding the matrix here is
+// preferable to adding a "general access" group and then forgetting to rein
+// it back in.
+{
+  // -------------------------------------------------------------------------
+  // Groups: who can do what. Members are looked up against Pocket-ID via
+  // OIDC `groups` claim.
+  // -------------------------------------------------------------------------
+  "groups": {
+    "group:admins":    ["umut.erdem@psimaker.org"],
+    "group:operators": ["umut.erdem@psimaker.org"],
+    "group:family":    [],   // expand if family devices ever join
+  },
+
+  // -------------------------------------------------------------------------
+  // Tag owners: who can register a node with a given tag (via auth-key).
+  // -------------------------------------------------------------------------
+  "tagOwners": {
+    "tag:server":  ["group:admins"],   // edge, airbase, future cluster nodes
+    "tag:client":  ["group:admins", "group:operators"],
+    "tag:ci":      ["group:admins"],
+    "tag:exit":    ["group:admins"],   // exit-node-capable
+    "tag:k8s":     ["group:admins"],   // k3s nodes specifically
+  },
+
+  // -------------------------------------------------------------------------
+  // ACL rules. Default-deny: anything not explicitly allowed is dropped.
+  // -------------------------------------------------------------------------
+  "acls": [
+    // Admins reach everything everywhere.
+    {
+      "action": "accept",
+      "src":    ["group:admins"],
+      "dst":    ["*:*"],
+    },
+
+    // Operators reach all servers and the cluster API on TCP 6443 / 443.
+    {
+      "action": "accept",
+      "src":    ["group:operators"],
+      "dst":    ["tag:server:*", "tag:k8s:6443", "tag:k8s:443"],
+    },
+
+    // Servers reach each other (k3s control-plane traffic, etcd-like sync,
+    // Longhorn replication, Beszel hub).
+    {
+      "action": "accept",
+      "src":    ["tag:server"],
+      "dst":    ["tag:server:*"],
+    },
+
+    // CI runners reach edge for the apply path; nothing else.
+    {
+      "action": "accept",
+      "src":    ["tag:ci"],
+      "dst":    ["tag:server:22", "tag:k8s:6443"],
+    },
+
+    // Family-class devices: only Plex on airbase, nothing else.
+    {
+      "action": "accept",
+      "src":    ["group:family"],
+      "dst":    ["airbase:32400"],
+    },
+  ],
+
+  // -------------------------------------------------------------------------
+  // SSH policy. Headscale exposes `tailscale ssh` only between machines that
+  // both belong to admins/operators; OIDC handles the auth, host keys are
+  // managed by the daemon.
+  // -------------------------------------------------------------------------
+  "ssh": [
+    {
+      "action": "accept",
+      "src":    ["group:admins"],
+      "dst":    ["tag:server"],
+      "users":  ["root", "umo"],
+    },
+    {
+      "action": "check",
+      "src":    ["group:operators"],
+      "dst":    ["tag:server"],
+      "users":  ["umo"],
+      "checkPeriod": "12h",
+    },
+  ],
+
+  // -------------------------------------------------------------------------
+  // Auto-approvers: routes / exit-nodes that don't need manual approval.
+  // -------------------------------------------------------------------------
+  "autoApprovers": {
+    "routes": {
+      "192.168.8.0/24": ["tag:server"],   // home LAN advertised by airbase
+    },
+    "exitNode": ["tag:exit"],
+  },
+
+  // -------------------------------------------------------------------------
+  // Tests — Headscale will refuse to apply this policy if any test fails.
+  // Cheap insurance against typos.
+  // -------------------------------------------------------------------------
+  "tests": [
+    {
+      "src":    "umut.erdem@psimaker.org",
+      "accept": ["airbase:22", "edge:6443", "100.64.0.2:32400"],
+    },
+    {
+      "src":    "tag:ci",
+      "accept": ["edge:22", "edge:6443"],
+      "deny":   ["airbase:22", "airbase:6443"],
+    },
+  ],
+}

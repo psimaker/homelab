@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  role_name: cloudflared_host
+  author: psimaker
+  description: Host-level cloudflared as a fallback for the in-cluster tunnel pod (edge only).
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+dependencies:
+  - role: baseline

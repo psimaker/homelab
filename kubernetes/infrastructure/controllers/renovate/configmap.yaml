@@ -1,0 +1,26 @@
+---
+# Renovate's runtime config. The actual policy lives in /renovate.json5 at the
+# repo root (so contributors see it on the first page of the repo). This
+# ConfigMap holds only the bits that need to be cluster-aware: cache TTLs,
+# log level, and the Gitea endpoint.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: renovate-config
+  namespace: renovate
+  labels:
+    app.kubernetes.io/managed-by: flux
+data:
+  config.js: |
+    module.exports = {
+      platform: 'gitea',
+      endpoint: 'https://git.psimaker.org/api/v1',
+      gitAuthor: 'Renovate Bot <renovate@psimaker.org>',
+      onboarding: false,
+      requireConfig: 'optional',
+      autodiscover: false,
+      repositories: ['umut.erdem/homelab', 'umut.erdem/loogi'],
+      logFile: '/tmp/renovate.log',
+      logFileLevel: 'debug',
+      // The on-disk renovate.json5 takes precedence; this stays sparse.
+    };

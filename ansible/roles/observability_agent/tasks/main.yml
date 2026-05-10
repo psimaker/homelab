@@ -1,0 +1,8 @@
+---
+- name: Install promtail
+  ansible.builtin.include_tasks: promtail.yml
+  when: promtail_install | bool
+
+- name: Install beszel-agent
+  ansible.builtin.include_tasks: beszel.yml
+  when: beszel_agent_install | bool

@@ -1,0 +1,101 @@
+# LOOGI SearXNG limiter config — limiter.toml as ConfigMap.
+#
+# Generated from /data/loogi/searxng/limiter.toml on airbase. Source of truth
+# is the loogi repo at git.psimaker.org/umut.erdem/loogi.
+#
+# Differences from the Compose deploy:
+#   * trusted_proxies: replaces the Docker-bridge RFC1918 ranges with:
+#       - in-cluster pod CIDRs (Cilium default 10.42.0.0/16)
+#       - the Cloudflare edge ranges (since `loogi.ch` ingress is via
+#         Cloudflare Tunnel → Traefik); X-Forwarded-For from any other source
+#         must NOT be trusted, otherwise an attacker could trivially bypass
+#         the per-IP rate limiter by spoofing the header.
+#   * pass_ip: drops the 172.30.0.0/24 entry (that was the Compose loogi-net
+#     bypass for crawl4ai) — in k3s, internal service consumers reach LOOGI
+#     via the cluster Service and are already covered by the pod CIDR.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loogi-limiter
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+data:
+  limiter.toml: |
+    # LOOGI — Limiter / Bot-Detection (k3s deploy).
+    # Mirror of git.psimaker.org/umut.erdem/loogi:searxng/limiter.toml with
+    # trusted_proxies adjusted for k3s + Cloudflare edge.
+
+    [botdetection]
+
+    # /32 = exakte IPv4-Adresse, /56 = IPv6-/56-Block.
+    ipv4_prefix = 32
+    ipv6_prefix = 56
+
+    # Trust X-Forwarded-For only when it arrives from:
+    #   - in-cluster pod CIDRs (Cilium default; adjust if podCIDR is changed)
+    #   - kube-svc CIDR (10.43.0.0/16, k3s default)
+    #   - localhost (sidecars, init containers)
+    #   - Cloudflare edge ranges (the public ingress path)
+    # Cloudflare lists fetched from
+    #   https://www.cloudflare.com/ips-v4/
+    #   https://www.cloudflare.com/ips-v6/
+    # at deploy time and pinned here; Renovate-style staleness check via
+    # the cloudflare-ips PrometheusRule in the observability tree warns when
+    # CF publishes a list that diverges from this snapshot.
+    trusted_proxies = [
+      # In-cluster
+      '127.0.0.0/8',
+      '::1',
+      '10.42.0.0/16',          # Cilium pod CIDR
+      '10.43.0.0/16',          # k3s default service CIDR
+      'fd00::/8',              # IPv6 ULAs (cluster-internal)
+
+      # Cloudflare IPv4 edge
+      '173.245.48.0/20',
+      '103.21.244.0/22',
+      '103.22.200.0/22',
+      '103.31.4.0/22',
+      '141.101.64.0/18',
+      '108.162.192.0/18',
+      '190.93.240.0/20',
+      '188.114.96.0/20',
+      '197.234.240.0/22',
+      '198.41.128.0/17',
+      '162.158.0.0/15',
+      '104.16.0.0/13',
+      '104.24.0.0/14',
+      '172.64.0.0/13',
+      '131.0.72.0/22',
+
+      # Cloudflare IPv6 edge
+      '2400:cb00::/32',
+      '2606:4700::/32',
+      '2803:f800::/32',
+      '2405:b500::/32',
+      '2405:8100::/32',
+      '2a06:98c0::/29',
+      '2c0f:f248::/32',
+    ]
+
+    [botdetection.ip_limit]
+    filter_link_local = false
+    link_token = true
+
+    [botdetection.ip_lists]
+    block_ip = []
+
+    # Bypass list: in-cluster service consumers reach LOOGI directly via the
+    # ClusterIP service and already match the trusted_proxies pod CIDR. We
+    # only allow loopback-style bypass here; everything else goes through
+    # the limiter. (Compose-deploy 172.30.0.0/24 entry intentionally removed.)
+    pass_ip = [
+      '127.0.0.0/8',
+      '::1',
+    ]
+
+    # Wir sind nicht auf searx.space gelistet.
+    pass_searxng_org = false

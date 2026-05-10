@@ -1,0 +1,51 @@
+---
+restic_install: true
+restic_version: "{{ restic_version | default('0.17.3') }}"
+restic_install_dir: /usr/local/bin
+restic_config_dir: /etc/restic
+restic_state_dir: /var/lib/restic
+restic_log_dir: /var/log/restic
+
+# Repositories. Primary is the Hetzner Storage Box (offsite #1). Secondary
+# is the Backblaze B2 bucket (offsite #2, critical sets only).
+restic_repository_primary: "{{ restic_repository_primary }}"
+restic_repository_secondary: "{{ restic_repository_secondary }}"
+
+# What to back up. Defaults are the Tier-2 stateful directories on airbase.
+restic_backup_paths:
+  - /data/loogi
+  - /data/gitea
+  - /data/vaultwarden
+  - /data/paperless
+  - /data/n8n
+  - /data/syncthing
+
+# Excluded paths (too large or already backed up elsewhere).
+restic_exclude_paths:
+  - /data/plex
+  - /data/rr/data
+  - /data/nextcloud-aio/nextcloud_aio_volumes/nextcloud_aio_nextcloud_data
+  - /mnt/hdd
+
+# Glob patterns excluded from every path.
+restic_exclude_patterns:
+  - "*.tmp"
+  - "*.log"
+  - "__pycache__"
+
+# Critical subset that goes to B2 as well.
+restic_b2_critical_paths:
+  - /data/vaultwarden
+  - /data/paperless
+  - /data/gitea
+  - /data/loogi
+
+# Schedule and retention.
+restic_schedule_oncalendar: "{{ restic_schedule_oncalendar | default('*-*-* 03:30:00 Europe/Zurich') }}"
+restic_keep_daily: "{{ restic_keep_daily | default(14) }}"
+restic_keep_weekly: "{{ restic_keep_weekly | default(8) }}"
+restic_keep_monthly: "{{ restic_keep_monthly | default(6) }}"
+
+# Notification
+restic_notify_on_failure: true
+restic_ntfy_url: "{{ ntfy_failure_url }}"

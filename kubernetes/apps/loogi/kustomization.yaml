@@ -1,0 +1,39 @@
+# kubernetes/apps/loogi/kustomization.yaml — LOOGI app resource list.
+#
+# Every manifest that should reconcile is listed here. Flux applies them via
+# the apps Kustomization (kubernetes/flux-system/gotk-sync.yaml). Order
+# inside `resources:` is irrelevant for kustomize, but we keep the file
+# grouped: namespace first, then chart sources, secrets, config, workload,
+# exposure, policy, observability.
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: loogi
+resources:
+  - namespace.yaml
+  # Chart sources + Helm release for Valkey (limiter cache backend)
+  - helm-repository.yaml
+  - helm-release.yaml
+  - valkey-values.yaml
+  # Secrets — SOPS-encrypted at rest
+  - secret.sops.yaml
+  # Config — settings.yml + limiter.toml are the source of truth for SearXNG
+  - configmap-settings.yaml
+  - configmap-limiter.yaml
+  # Workload + exposure
+  - deployment.yaml
+  - service.yaml
+  - ingressroute.yaml
+  # Resilience
+  - networkpolicy.yaml
+  - poddisruptionbudget.yaml
+  - horizontalpodautoscaler.yaml
+  # Observability — scrape, recording rules, SLOs
+  - servicemonitor.yaml
+  - prometheusrule-recording.yaml
+  - slos.yaml
+
+commonLabels:
+  app.kubernetes.io/name: loogi
+  app.kubernetes.io/part-of: loogi
+  tier: tier-1

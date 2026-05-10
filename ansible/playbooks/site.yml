@@ -1,0 +1,62 @@
+---
+# Master playbook. Applies every relevant role to every node, in the correct
+# order. Idempotent — running again should produce zero changes.
+#
+# Usage:
+#   ansible-playbook playbooks/site.yml
+#   ansible-playbook playbooks/site.yml --tags baseline,docker_host
+#   ansible-playbook playbooks/site.yml --check --diff
+#
+# k3s is in a separate playbook (k3s-bootstrap.yml) because it requires
+# server-then-agent ordering across hosts and a fact (the join token) to
+# travel between plays.
+
+- name: Baseline configuration on all hosts
+  hosts: all
+  become: true
+  gather_facts: true
+  roles:
+    - role: baseline
+      tags: [baseline]
+
+- name: Tailscale enrolment on all hosts
+  hosts: all
+  become: true
+  roles:
+    - role: tailscale_node
+      tags: [tailscale, tailscale_node]
+
+- name: Docker host configuration (home_dataplane only)
+  hosts: home_dataplane
+  become: true
+  roles:
+    - role: docker_host
+      when: docker_install | bool
+      tags: [docker, docker_host]
+
+- name: Cloudflared host fallback (edge only)
+  hosts: edge
+  become: true
+  roles:
+    - role: cloudflared_host
+      when: cloudflared_host_install | bool
+      tags: [cloudflared, cloudflared_host]
+
+- name: Observability agents on all hosts
+  hosts: all
+  become: true
+  roles:
+    - role: observability_agent
+      tags: [observability, observability_agent]
+
+- name: Restic backup timer (home_dataplane only)
+  hosts: home_dataplane
+  become: true
+  roles:
+    - role: restic_host_job
+      when: restic_install | bool
+      tags: [restic, restic_host_job]
+
+- name: Bootstrap k3s control-plane and agents
+  ansible.builtin.import_playbook: k3s-bootstrap.yml
+  tags: [k3s, k3s_server, k3s_agent]

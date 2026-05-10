@@ -1,0 +1,22 @@
+# Managed by Ansible — roles/restic_host_job. Do not edit by hand.
+[Unit]
+Description=restic — nightly homelab backup
+Documentation=https://restic.readthedocs.io/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile={{ restic_config_dir }}/restic.env
+ExecStart={{ restic_install_dir }}/restic-backup
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=4h
+StandardOutput=append:{{ restic_log_dir }}/restic-backup.out
+StandardError=append:{{ restic_log_dir }}/restic-backup.err
+
+ProtectSystem=full
+ProtectHome=read-only
+PrivateTmp=true
+NoNewPrivileges=true

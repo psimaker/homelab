@@ -1,0 +1,35 @@
+# LOOGI Service.
+#
+# ClusterIP — public ingress lands at Traefik (in the `traefik` namespace),
+# which routes to this Service via the IngressRoute. There is no
+# NodePort/LoadBalancer; Cloudflare Tunnel terminates inbound traffic and
+# forwards to Traefik internally.
+#
+# Port mapping: 80 (Service) → 8080 (Pod). Traefik's IngressRoute targets
+# port 80 on this Service.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loogi
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    app.kubernetes.io/component: searxng
+    tier: tier-1
+  annotations:
+    description: >-
+      ClusterIP fronting the LOOGI SearXNG pods. Targeted by the loogi
+      IngressRoute in this namespace.
+spec:
+  type: ClusterIP
+  ipFamilyPolicy: SingleStack
+  selector:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/component: searxng
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http

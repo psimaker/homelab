@@ -1,0 +1,12 @@
+---
+# Infrastructure aggregator. Order matters: the parent flux-system Kustomization
+# applies all four child paths in one shot, but inside each path Flux/kustomize
+# walks resources in the order listed below — first the namespaces and HelmRepos,
+# then HelmReleases, then per-app extras (IngressRoutes, ClusterIssuers, …).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - controllers
+  - storage
+  - observability
+  - identity

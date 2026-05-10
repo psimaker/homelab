@@ -1,0 +1,11 @@
+---
+# Gabe Cook's Headscale chart. Tracks upstream releases and adds a sane
+# Persistent + IngressRoute integration.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: gabe565
+  namespace: identity
+spec:
+  interval: 1h
+  url: https://charts.gabe565.com

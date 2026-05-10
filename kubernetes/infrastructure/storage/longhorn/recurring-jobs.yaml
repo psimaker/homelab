@@ -1,0 +1,34 @@
+---
+# Recurring snapshot every 6h, retained 14×24 = 56 hours of fine-grained
+# rollback. This is the "snapshot" tier of the 3-2-1 backup model documented
+# in docs/architecture.md.
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: snapshot-6h
+  namespace: longhorn-system
+spec:
+  cron: "0 */6 * * *"
+  task: snapshot
+  groups: []
+  retain: 14
+  concurrency: 2
+  labels:
+    homelab.psimaker.org/job: snapshot-6h
+---
+# Daily backup to Hetzner Object Storage. Retain 14 days; older history is
+# kept by restic in the offsite backup tiers (Hetzner Storage Box / B2),
+# not by Longhorn directly.
+apiVersion: longhorn.io/v1beta2
+kind: RecurringJob
+metadata:
+  name: backup-daily
+  namespace: longhorn-system
+spec:
+  cron: "30 2 * * *"
+  task: backup
+  groups: []
+  retain: 14
+  concurrency: 1
+  labels:
+    homelab.psimaker.org/job: backup-daily

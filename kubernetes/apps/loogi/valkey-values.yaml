@@ -1,0 +1,131 @@
+# Bitnami valkey chart values for the LOOGI limiter cache.
+#
+# Wrapped as a ConfigMap so the HelmRelease can reference it via valuesFrom.
+# This keeps the values file as plain YAML for diffability and avoids quoting
+# the entire YAML document inside the HelmRelease itself.
+#
+# Knobs that matter:
+#   architecture: standalone — single replica is correct for a cache. Restarts
+#     are tolerable; the SearXNG limiter regenerates link tokens on miss.
+#   auth.enabled: false       — see helm-release.yaml comment for rationale.
+#   primary.persistence.size  — 1Gi is generous for a cache. Longhorn replicates
+#     across both Tier-1 nodes (replicaCount: 2 is set on the StorageClass).
+#   primary.resources         — small but enough for the loogi traffic profile.
+#                               Bumping happens via Renovate-driven PR + load test.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: valkey-values
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+data:
+  values.yaml: |
+    architecture: standalone
+
+    # Auth disabled by design — NetworkPolicy is the access boundary. See
+    # helm-release.yaml header comment for the threat-model write-up.
+    auth:
+      enabled: false
+
+    # Renovate tracks the image via the comment below; the chart's appVersion
+    # follows automatically when we bump the chart, but this lets us pin a
+    # specific patch independently if we ever need to.
+    image:
+      # renovate: datasource=docker depName=bitnami/valkey
+      registry: docker.io
+      repository: bitnami/valkey
+      tag: 8.1.0-debian-12-r0
+      pullPolicy: IfNotPresent
+
+    primary:
+      persistence:
+        enabled: true
+        storageClass: longhorn
+        size: 1Gi
+        accessModes:
+          - ReadWriteOnce
+
+      # Resource budget for the limiter cache: SearXNG keeps small entries
+      # (link tokens, favicons, autocomplete results). 128Mi is plenty for
+      # current traffic; the limit is set close to the request to keep this
+      # workload Guaranteed QoS, which makes it less eviction-prone than
+      # Burstable on a busy node.
+      resources:
+        requests:
+          cpu: 50m
+          memory: 128Mi
+        limits:
+          cpu: 250m
+          memory: 256Mi
+
+      # Hardening: drop everything, run non-root, read-only root FS.
+      podSecurityContext:
+        enabled: true
+        fsGroup: 1001
+        runAsNonRoot: true
+      containerSecurityContext:
+        enabled: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        runAsNonRoot: true
+        readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+        seccompProfile:
+          type: RuntimeDefault
+
+      # Liveness/readiness defaults from the chart are fine; we only adjust
+      # the failure thresholds slightly downwards so unhealthy pods get
+      # cycled faster than the Bitnami defaults (chart default is 5).
+      livenessProbe:
+        enabled: true
+        initialDelaySeconds: 20
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 3
+      readinessProbe:
+        enabled: true
+        initialDelaySeconds: 5
+        periodSeconds: 5
+        timeoutSeconds: 3
+        failureThreshold: 3
+
+      # Pin Valkey to airbase: the limiter cache is in the same failure
+      # domain as the search engine pods to keep latency local and avoid
+      # cross-site round-trips. The Deployment pins similarly.
+      nodeSelector:
+        kubernetes.io/hostname: airbase
+
+    # Metrics — we want Prometheus to scrape Valkey alongside SearXNG, both
+    # so the SLO recording rules have a complete picture and so we get
+    # alerting when the cache misbehaves.
+    metrics:
+      enabled: true
+      serviceMonitor:
+        enabled: true
+        namespace: loogi
+        interval: 30s
+        scrapeTimeout: 10s
+        labels:
+          app.kubernetes.io/part-of: loogi
+          tier: tier-1
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          cpu: 100m
+          memory: 64Mi
+
+    # NetworkPolicy comes from the in-tree manifest, not the chart, because
+    # we need cross-resource references (Traefik namespace, kube-dns, etc.)
+    # that are easier to express directly. Disable the chart's own version
+    # so we don't end up with two NetworkPolicies fighting.
+    networkPolicy:
+      enabled: false

@@ -1,0 +1,106 @@
+# Pocket-ID values. SQLite, single replica — see ADR-0006 for the
+# Pocket-ID-vs-Authentik trade-off. Identity is the one place where Tier-1's
+# "stateless workloads only" rule bends a little: Pocket-ID owns its DB. We
+# back it up via Longhorn snapshot + restic offsite.
+
+# renovate: datasource=docker depName=ghcr.io/pocket-id/pocket-id
+image:
+  repository: ghcr.io/pocket-id/pocket-id
+  tag: v0.39.0
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 1411
+
+persistence:
+  enabled: true
+  storageClass: longhorn
+  size: 2Gi
+  accessMode: ReadWriteOnce
+
+env:
+  - name: PUBLIC_APP_URL
+    value: https://id.psimaker.org
+  - name: TRUST_PROXY
+    value: "true"
+  - name: ANALYTICS_DISABLED
+    value: "true"
+  - name: PORT
+    value: "1411"
+
+envFrom:
+  - secretRef:
+      name: pocket-id-secrets
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+ingress:
+  enabled: false   # custom IngressRoute below
+
+# OIDC clients defined upfront so a fresh-bootstrap of Pocket-ID has the
+# clients pre-seeded. The chart's `oidcClients` value generates them as a
+# config-as-code source on first boot.
+oidcClients:
+  - id: grafana
+    name: Grafana
+    callbackURLs:
+      - https://grafana.tailnet/login/generic_oauth
+    isPublic: false
+    pkceEnabled: true
+    logoUrl: https://grafana.com/static/assets/img/fav32.png
+    allowedUserGroups:
+      - admins
+      - editors
+      - viewers
+  - id: beszel
+    name: Beszel
+    callbackURLs:
+      - https://beszel.tailnet/api/oauth2-redirect/oidc
+    isPublic: false
+    pkceEnabled: true
+    allowedUserGroups:
+      - admins
+  - id: tinyauth
+    name: Tinyauth
+    callbackURLs:
+      - https://auth.tailnet/api/oauth/callback
+    isPublic: false
+    pkceEnabled: true
+    allowedUserGroups:
+      - admins
+      - editors
+  - id: headscale
+    name: Headscale
+    callbackURLs:
+      - https://hs.psimaker.org/oidc/callback
+    isPublic: false
+    pkceEnabled: true
+    allowedUserGroups:
+      - admins
+
+serviceAccount:
+  create: true
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop: ["ALL"]

@@ -1,0 +1,47 @@
+# Valkey — Bitnami chart. Used as the SearXNG limiter / favicon / autocomplete
+# cache. NOT durable state: if the PVC is lost, LOOGI is fine after a restart.
+# We still allocate a small Longhorn PVC so a pod restart doesn't blow away
+# the limiter's link-token state for currently-active visitors.
+#
+# Auth is intentionally disabled: the NetworkPolicy in this namespace blocks
+# ingress to port 6379 from anywhere except SearXNG pods. Adding password
+# auth would mean another SOPS secret for no real defence-in-depth gain on
+# a pod-network-isolated single-tenant service.
+#
+# Renovate tracks the chart version via the comment below.
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: valkey
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  interval: 5m
+  chart:
+    spec:
+      # renovate: registryUrl=oci://registry-1.docker.io/bitnamicharts chart=valkey
+      chart: valkey
+      version: 2.4.0
+      sourceRef:
+        kind: HelmRepository
+        name: bitnami
+        namespace: loogi
+      interval: 12h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+      strategy: rollback
+  driftDetection:
+    mode: enabled
+  valuesFrom:
+    - kind: ConfigMap
+      name: valkey-values
+      valuesKey: values.yaml

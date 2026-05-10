@@ -1,0 +1,12 @@
+# Managed by Ansible — roles/restic_host_job. Do not edit by hand.
+[Unit]
+Description=restic — nightly homelab backup (timer)
+
+[Timer]
+OnCalendar={{ restic_schedule_oncalendar }}
+Persistent=true
+RandomizedDelaySec=300
+Unit=restic-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,121 @@
+# Traefik v3.3 values. Chart 33.2.0 (May 2026).
+#
+# Key choices:
+# - Service type ClusterIP. The cloudflared pod is the only thing dialling
+#   Traefik from outside the cluster, and it does so via the service. We do
+#   NOT expose Traefik on a NodePort or LoadBalancer; ingress = Cloudflare.
+# - IngressRoute (CRD) is the canonical route shape, not Ingress. We disable
+#   the Ingress provider to discourage the legacy resource.
+# - Default middlewares (rateLimit / secureHeaders / redirect) are defined as
+#   Middleware CRDs in middlewares.yaml. They are not auto-attached; routes
+#   opt in by referencing them.
+# - Metrics exposed via prometheus + ServiceMonitor.
+
+# renovate: datasource=docker depName=docker.io/traefik
+image:
+  registry: docker.io
+  repository: traefik
+  tag: v3.3.0
+
+deployment:
+  replicas: 2
+  kind: Deployment
+
+service:
+  type: ClusterIP
+  spec:
+    externalTrafficPolicy: null
+
+ports:
+  web:
+    port: 8000
+    expose:
+      default: false
+  websecure:
+    port: 8443
+    tls:
+      enabled: true
+    expose:
+      default: true
+    middlewares: []
+  metrics:
+    port: 9100
+    expose:
+      default: false
+
+ingressRoute:
+  dashboard:
+    enabled: false  # we expose the dashboard via our own IngressRoute behind Tinyauth
+
+providers:
+  kubernetesCRD:
+    enabled: true
+    allowCrossNamespace: true
+    allowExternalNameServices: false
+  kubernetesIngress:
+    enabled: false
+  kubernetesGateway:
+    enabled: false  # Cilium provides the Gateway API control-plane
+
+api:
+  dashboard: true
+  insecure: false
+
+# Logs + access logs (json so Loki-style ingestion picks fields up cleanly)
+logs:
+  general:
+    level: INFO
+    format: json
+  access:
+    enabled: true
+    format: json
+    fields:
+      headers:
+        defaultMode: drop
+        names:
+          User-Agent: keep
+          X-Forwarded-For: keep
+          X-Real-Ip: keep
+          Cf-Connecting-Ip: keep
+          Cf-Ipcountry: keep
+
+metrics:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: kube-prometheus-stack
+      interval: 30s
+    addRoutersLabels: true
+    addServicesLabels: true
+
+# Trust headers from cloudflared (which is the only ingress source)
+additionalArguments:
+  - --entrypoints.websecure.forwardedheaders.trustedips=10.42.0.0/16,100.64.0.0/10
+  - --entrypoints.websecure.proxyprotocol.trustedips=10.42.0.0/16,100.64.0.0/10
+  - --serversTransport.insecureSkipVerify=false
+  - --core.defaultRuleSyntax=v3
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 512Mi
+
+# Pod-disruption budget: with replicas=2 we still survive a node drain
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Anti-affinity so the two replicas land on different nodes
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+          topologyKey: kubernetes.io/hostname

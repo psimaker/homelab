@@ -1,0 +1,43 @@
+name: crawl4ai
+
+services:
+  crawl4ai:
+    # renovate: datasource=docker
+    image: unclecode/crawl4ai:${TAG:-latest}
+    container_name: crawl4ai
+    restart: unless-stopped
+    shm_size: "1g"
+    env_file:
+      - .llm.env
+    environment:
+      CRAWL4AI_API_TOKEN: ${CRAWL4AI_API_TOKEN:-}
+    networks:
+      proxy-net:
+        aliases:
+          - crawl4ai
+    # No host port is published by default. Nginx Proxy Manager can reach
+    # this service via proxy-net at http://crawl4ai:11235.
+    # For local host-only testing, uncomment:
+    # ports:
+    #   - "127.0.0.1:11235:11235"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11235/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    mem_limit: 4G
+    memswap_limit: 4G
+    cpus: 4.0
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+networks:
+  proxy-net:
+    external: true

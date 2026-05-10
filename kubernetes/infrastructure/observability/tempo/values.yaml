@@ -1,0 +1,68 @@
+# Tempo single-binary, OTLP receivers (gRPC 4317, HTTP 4318).
+#
+# Storage: Hetzner Object Storage S3-compat, bucket `psimaker-homelab-tempo`.
+# Retention 7 days — traces compress well but we don't need long history.
+
+tempo:
+  retention: 168h    # 7 days
+
+  storage:
+    trace:
+      backend: s3
+      s3:
+        bucket: psimaker-homelab-tempo
+        endpoint: fsn1.your-objectstorage.com
+        region: eu-central-1
+        forcepathstyle: true
+        insecure: false
+        # access_key/secret_key come from env vars wired via extraEnvFrom
+
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+    jaeger:
+      protocols:
+        thrift_http:
+          endpoint: 0.0.0.0:14268
+        grpc:
+          endpoint: 0.0.0.0:14250
+    zipkin:
+      endpoint: 0.0.0.0:9411
+
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: http://kube-prometheus-stack-prometheus.observability.svc:9090/api/v1/write
+
+server:
+  logLevel: info
+  logFormat: json
+
+persistence:
+  enabled: true
+  storageClassName: longhorn
+  size: 10Gi
+
+extraEnvFrom:
+  - secretRef:
+      name: tempo-storage-credentials
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+# Service: ClusterIP, only consumers are in-cluster (Grafana for query,
+# instrumented apps for OTLP push).
+service:
+  type: ClusterIP
+
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    release: kube-prometheus-stack

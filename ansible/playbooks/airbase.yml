@@ -1,0 +1,26 @@
+---
+# Apply only the home_dataplane (airbase) playbook subset. Useful when
+# iterating on Docker / restic / observability without touching edge.
+#
+# k3s_agent is included here, but only runs if a server is already up
+# (k3s_server_url reachable). For the very first bootstrap use site.yml.
+
+- name: Configure airbase
+  hosts: home_dataplane
+  become: true
+  gather_facts: true
+  roles:
+    - role: baseline
+      tags: [baseline]
+    - role: tailscale_node
+      tags: [tailscale, tailscale_node]
+    - role: docker_host
+      when: docker_install | bool
+      tags: [docker, docker_host]
+    - role: observability_agent
+      tags: [observability, observability_agent]
+    - role: restic_host_job
+      when: restic_install | bool
+      tags: [restic, restic_host_job]
+    - role: k3s_agent
+      tags: [k3s, k3s_agent]

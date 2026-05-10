@@ -1,0 +1,275 @@
+services:
+  gluetun:
+    # renovate: datasource=docker
+    image: qmcgaw/gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - "7878:7878"       # Radarr
+      - "8989:8989"       # Sonarr
+      - "9696:9696"       # Prowlarr
+      - "6767:6767"       # Bazarr
+      - "8191:8191"       # Flaresolverr
+      - "8087:8080"       # SABnzbd (HTTP)
+      - "9090:9090"       # SABnzbd (HTTPS)
+      - "5006:5006"       # Configarr
+    volumes:
+      - /data/rr/gluetun:/gluetun
+    environment:
+      - VPN_SERVICE_PROVIDER=${VPN_SERVICE_PROVIDER}
+      - VPN_TYPE=${VPN_TYPE}
+      - WIREGUARD_PRIVATE_KEY=${WIREGUARD_PRIVATE_KEY}
+      - SERVER_COUNTRIES=${SERVER_COUNTRIES}
+      - TZ=${TZ}
+      - FIREWALL_OUTBOUND_SUBNETS=${FIREWALL_OUTBOUND_SUBNETS}
+      - DOT=off              # Wichtig für Stabilität - DNS läuft durch WireGuard-Tunnel
+      - DNS_ADDRESS=10.2.0.1 # ProtonVPN interner DNS-Server
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+
+  sabnzbd:
+    container_name: sabnzbd
+    # renovate: datasource=docker
+    image: lscr.io/linuxserver/sabnzbd:latest
+    network_mode: "service:gluetun"
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ./config/sabnzbd:/config
+      - /mnt/hdd:/data
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+
+  prowlarr:
+    container_name: prowlarr
+    # renovate: datasource=docker
+    image: lscr.io/linuxserver/prowlarr:latest
+    network_mode: "service:gluetun"
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ./config/prowlarr:/config
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+
+  radarr:
+    container_name: radarr
+    # renovate: datasource=docker
+    image: lscr.io/linuxserver/radarr:latest
+    network_mode: "service:gluetun"
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ./config/radarr:/config
+      - /mnt/hdd:/data
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+
+  sonarr:
+    container_name: sonarr
+    # renovate: datasource=docker
+    image: lscr.io/linuxserver/sonarr:latest
+    network_mode: "service:gluetun"
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    volumes:
+      - ./config/sonarr:/config
+      - /mnt/hdd:/data
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+
+  tdarr:
+    container_name: tdarr
+    # renovate: datasource=docker
+    image: ghcr.io/haveagitgat/tdarr
+    ports:
+      - "8265:8265"
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - serverIP=0.0.0.0
+      - internalNode=true
+      - nodeIP=0.0.0.0
+    networks:
+      - arr_network
+    volumes:
+      - ./config/tdarr/configs:/app/configs
+      - ./config/tdarr/logs:/app/logs
+      - ./config/tdarr/server:/app/server
+      - /mnt/hdd/media:/mnt/media
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+
+  flaresolverr:
+    container_name: flaresolverr
+    # renovate: datasource=docker
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    network_mode: "service:gluetun"
+    environment:
+      - TZ=${TZ}
+      - LOG_LEVEL=info
+      - CAPTCHA_SOLVER=none
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+    depends_on:
+      gluetun:
+        condition: service_healthy
+
+  bazarr:
+    container_name: bazarr
+    # renovate: datasource=docker
+    image: lscr.io/linuxserver/bazarr:latest
+    network_mode: "service:gluetun"
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+    volumes:
+      - ./config/bazarr:/config
+      - /mnt/hdd/media:/data
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+
+  seerr:
+    container_name: seerr
+    # renovate: datasource=docker
+    image: ghcr.io/seerr-team/seerr:latest
+    # Separiert von Gluetun - Jellyseerr/Overseerr sind zu Seerr zusammengeführt (Feb 2026)
+    environment:
+      - TZ=${TZ}
+      - PORT=5055
+    volumes:
+      - ./config/jellyseerr:/app/config
+    init: true
+    # ports:
+    #   - "5055:5055"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5055/api/v1/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      arr_network:
+      proxy-net:
+        aliases:
+          - jellyseerr
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+
+  maintainerr:
+    container_name: maintainerr
+    # renovate: datasource=docker
+    image: ghcr.io/maintainerr/maintainerr:latest
+    user: ${PUID}:${PGID}
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./config/maintainerr:/opt/data
+    # ports:
+    #   - "6246:6246"
+    networks:
+      arr_network:
+      proxy-net:
+        aliases:
+          - maintainerr
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+
+  umlautadaptarr:
+    container_name: umlautadaptarr
+    # renovate: datasource=docker
+    image: pcjones/umlautadaptarr:latest
+    network_mode: "service:gluetun"
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - RADARR__0__NAME=Radarr_Primary
+      - RADARR__0__ENABLED=true
+      - RADARR__0__HOST=http://127.0.0.1:7878
+      - RADARR__0__APIKEY=${RADARR_API_KEY}
+      - SONARR__0__NAME=Sonarr_Primary
+      - SONARR__0__ENABLED=true
+      - SONARR__0__HOST=http://127.0.0.1:8989
+      - SONARR__0__APIKEY=${SONARR_API_KEY}
+    volumes:
+      - ./config/umlautadaptarr:/config
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+    depends_on:
+      gluetun:
+        condition: service_healthy
+
+  configarr:
+    container_name: configarr
+    # renovate: datasource=docker
+    image: ghcr.io/raydak-labs/configarr:latest
+    network_mode: "service:gluetun"
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - PORT=5006
+    volumes:
+      - ./config/configarr:/app/config
+      - ./dockerrepos:/app/repos
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: on-failure
+    depends_on:
+      gluetun:
+        condition: service_healthy
+
+networks:
+  proxy-net:
+    external: true
+  arr_network:
+    driver: bridge

@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Managed by Ansible — roles/restic_host_job. Do not edit by hand.
+#
+# Nightly restic run:
+#   1. Backup `restic_backup_paths` to the primary repo (Hetzner Storage Box).
+#   2. Backup `restic_b2_critical_paths` to the secondary repo (B2).
+#   3. Forget + prune both repos with the configured retention.
+#   4. On any failure, POST to ntfy with a one-line summary.
+set -euo pipefail
+
+# shellcheck disable=SC1091
+source {{ restic_config_dir }}/restic.env
+
+LOG_FILE="{{ restic_log_dir }}/restic-$(date +%Y%m%d-%H%M%S).log"
+HOST="$(hostname -s)"
+EXCLUDE_FILE="{{ restic_config_dir }}/excludes.d/default.exclude"
+
+log()  { echo "[$(date -Iseconds)] $*" | tee -a "${LOG_FILE}"; }
+fail() {
+  log "FAILURE: $*"
+  if [[ -n "${NTFY_FAILURE_URL:-}" ]]; then
+    curl --silent --fail --show-error \
+      -H "Title: restic backup FAILED on ${HOST}" \
+      -H "Priority: urgent" \
+      -H "Tags: rotating_light,floppy_disk" \
+      -d "$(tail -n 30 "${LOG_FILE}")" \
+      "${NTFY_FAILURE_URL}" || true
+  fi
+  exit 1
+}
+trap 'fail "unexpected error at line ${LINENO}"' ERR
+
+# --- Primary: Hetzner Storage Box -----------------------------------------
+log "primary: backup starting"
+restic --repo "${RESTIC_REPOSITORY_PRIMARY}" \
+  --tag "host=${HOST}" --tag "scheduled" \
+  --exclude-file "${EXCLUDE_FILE}" \
+  --one-file-system \
+  backup \
+{% for p in restic_backup_paths %}
+  "{{ p }}" \
+{% endfor %}
+  >>"${LOG_FILE}" 2>&1
+
+log "primary: forget+prune starting"
+restic --repo "${RESTIC_REPOSITORY_PRIMARY}" forget --prune \
+  --keep-daily {{ restic_keep_daily }} \
+  --keep-weekly {{ restic_keep_weekly }} \
+  --keep-monthly {{ restic_keep_monthly }} \
+  --tag "host=${HOST}" \
+  >>"${LOG_FILE}" 2>&1
+
+# --- Secondary: Backblaze B2 (critical sets only) -------------------------
+log "secondary (B2): backup starting"
+restic --repo "${RESTIC_REPOSITORY_SECONDARY}" \
+  --tag "host=${HOST}" --tag "critical" \
+  --exclude-file "${EXCLUDE_FILE}" \
+  --one-file-system \
+  backup \
+{% for p in restic_b2_critical_paths %}
+  "{{ p }}" \
+{% endfor %}
+  >>"${LOG_FILE}" 2>&1
+
+log "secondary (B2): forget+prune starting"
+restic --repo "${RESTIC_REPOSITORY_SECONDARY}" forget --prune \
+  --keep-monthly 6 \
+  --keep-yearly 2 \
+  --tag "host=${HOST}" \
+  >>"${LOG_FILE}" 2>&1
+
+log "OK"

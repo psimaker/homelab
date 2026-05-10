@@ -1,0 +1,19 @@
+---
+# Galaxy collections + roles consumed by playbooks/ and roles/.
+# Pinned for reproducibility; Renovate tracks updates as PRs.
+
+collections:
+  - name: ansible.posix
+    version: 2.0.0
+  - name: community.general
+    version: 10.4.0
+  - name: community.docker
+    version: 4.2.0
+  - name: community.sops
+    version: 2.2.0
+  - name: ansible.utils
+    version: 5.1.2
+  - name: kubernetes.core
+    version: 5.1.0
+
+roles: []

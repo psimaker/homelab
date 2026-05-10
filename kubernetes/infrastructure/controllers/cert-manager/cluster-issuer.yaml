@@ -1,0 +1,58 @@
+---
+# Production Let's Encrypt issuer using DNS-01 over Cloudflare.
+#
+# We use DNS-01 (not HTTP-01) because:
+# 1. We need wildcards for `*.loogi.ch` and `*.psimaker.org` — HTTP-01 cannot
+#    issue wildcards.
+# 2. cloudflared terminates TLS upstream; an HTTP-01 challenge would have to
+#    be routed through it, which is doable but pointlessly complex.
+# 3. DNS-01 is happy when ports 80/443 are unreachable from the public internet
+#    (which is true for our home node `airbase`).
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    app.kubernetes.io/managed-by: flux
+spec:
+  acme:
+    email: umut.erdem@protonmail.com
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-prod-account
+    solvers:
+      - selector:
+          dnsZones:
+            - loogi.ch
+            - psimaker.org
+        dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token
+---
+# Staging issuer — used for development of new IngressRoutes. Swap the
+# annotation `cert-manager.io/cluster-issuer` to `letsencrypt-staging` while
+# iterating, to avoid burning the LE rate limit.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  labels:
+    app.kubernetes.io/managed-by: flux
+spec:
+  acme:
+    email: umut.erdem@protonmail.com
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: letsencrypt-staging-account
+    solvers:
+      - selector:
+          dnsZones:
+            - loogi.ch
+            - psimaker.org
+        dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: cloudflare-api-token
+              key: api-token

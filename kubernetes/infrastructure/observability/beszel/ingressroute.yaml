@@ -1,0 +1,40 @@
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: beszel
+  namespace: observability
+  annotations:
+    homelab.psimaker.org/exposure: tailnet-only
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`beszel.tailnet`)
+      kind: Rule
+      services:
+        - name: beszel-hub
+          port: 8090
+      middlewares:
+        - name: tinyauth-forward-auth
+          namespace: identity
+        - name: secure-headers
+          namespace: traefik
+  tls:
+    secretName: beszel-tls
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: beszel-tls
+  namespace: observability
+spec:
+  secretName: beszel-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: beszel.tailnet
+  dnsNames:
+    - beszel.tailnet
+  duration: 2160h
+  renewBefore: 360h

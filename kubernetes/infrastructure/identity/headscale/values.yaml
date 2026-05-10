@@ -1,0 +1,152 @@
+# Headscale values.
+#
+# Identity (the WHO) is delegated to Pocket-ID via OIDC. ACL (the WHAT) lives
+# next to this file as acl.hujson and is mounted via a separate ConfigMap.
+# Persistence: SQLite on Longhorn. We could move to Postgres later but a
+# 4-node mesh doesn't justify the operational overhead.
+
+# renovate: datasource=docker depName=headscale/headscale
+image:
+  repository: headscale/headscale
+  tag: 0.23.0
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  port: 8080
+  metrics:
+    enabled: true
+    port: 9090
+  type: ClusterIP
+
+persistence:
+  data:
+    enabled: true
+    storageClass: longhorn-replicated
+    size: 2Gi
+    accessMode: ReadWriteOnce
+
+# Headscale config. The chart renders this into a config.yaml ConfigMap.
+configuration:
+  server_url: https://hs.psimaker.org
+  listen_addr: 0.0.0.0:8080
+  metrics_listen_addr: 0.0.0.0:9090
+  grpc_listen_addr: 0.0.0.0:50443
+  grpc_allow_insecure: false
+
+  noise:
+    private_key_path: /var/lib/headscale/noise_private.key
+
+  prefixes:
+    v4: 100.64.0.0/10
+    v6: fd7a:115c:a1e0::/48
+    allocation: sequential
+
+  derp:
+    server:
+      enabled: true
+      region_id: 999
+      region_code: "homelab"
+      region_name: "Homelab DERP (edge)"
+      stun_listen_addr: "0.0.0.0:3478"
+      private_key_path: /var/lib/headscale/derp_server_private.key
+    urls:
+      - https://controlplane.tailscale.com/derpmap/default
+    paths: []
+    auto_update_enabled: true
+    update_frequency: 24h
+
+  database:
+    type: sqlite3
+    sqlite:
+      path: /var/lib/headscale/db.sqlite
+      write_ahead_log: true
+
+  log:
+    level: info
+    format: json
+
+  dns:
+    magic_dns: true
+    base_domain: tailnet
+    nameservers:
+      global:
+        - 1.1.1.1
+        - 1.0.0.1
+    search_domains: []
+
+  oidc:
+    only_start_if_oidc_is_available: true
+    issuer: https://id.psimaker.org
+    client_id: headscale
+    # client_secret_path injected from secret.sops.yaml as a volume
+    client_secret_path: /etc/headscale/oidc-client-secret
+    scope: ["openid", "profile", "email", "groups"]
+    extra_params:
+      domain_hint: psimaker.org
+    allowed_groups:
+      - admins
+      - operators
+    strip_email_domain: false
+    pkce:
+      enabled: true
+
+  policy:
+    mode: file
+    path: /etc/headscale/acl.hujson  # mounted via the acl-policy ConfigMap
+
+# Mount the OIDC client secret from a SOPS-encrypted Secret as a file at
+# `/etc/headscale/oidc-client-secret`. The chart's `extraEnvFrom` and
+# `extraVolumes` hooks make this idiomatic.
+extraEnvFrom: []
+
+extraVolumes:
+  - name: oidc-secret
+    secret:
+      secretName: headscale-oidc
+      items:
+        - key: client_secret
+          path: oidc-client-secret
+  - name: acl-policy
+    configMap:
+      name: headscale-acl
+      items:
+        - key: acl.hujson
+          path: acl.hujson
+
+extraVolumeMounts:
+  - name: oidc-secret
+    mountPath: /etc/headscale/oidc-client-secret
+    subPath: oidc-client-secret
+    readOnly: true
+  - name: acl-policy
+    mountPath: /etc/headscale/acl.hujson
+    subPath: acl.hujson
+    readOnly: true
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    release: kube-prometheus-stack
+  interval: 30s
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop: ["ALL"]

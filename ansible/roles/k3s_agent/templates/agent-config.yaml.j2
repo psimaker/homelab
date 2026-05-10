@@ -1,0 +1,13 @@
+# Managed by Ansible — roles/k3s_agent. Do not edit by hand.
+# Reference: https://docs.k3s.io/installation/configuration#configuration-file
+server: "{{ k3s_server_url }}"
+node-ip: "{{ k3s_agent_node_ip }}"
+node-external-ip: "{{ k3s_agent_external_ip }}"
+snapshotter: "overlayfs"
+node-label:
+  - "topology.kubernetes.io/zone=home-ch"
+  - "node-role.kubernetes.io/dataplane=true"
+kubelet-arg:
+  - "max-pods=200"
+  - "system-reserved=cpu=500m,memory=1Gi"
+  - "kube-reserved=cpu=200m,memory=512Mi"

@@ -1,0 +1,12 @@
+---
+# Reuse the Grafana HelmRepository from loki/. Each child Kustomization
+# can declare its own with the same name in the same namespace; Flux
+# deduplicates by namespace+name.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  interval: 1h
+  url: https://grafana.github.io/helm-charts

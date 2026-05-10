@@ -1,0 +1,54 @@
+---
+# Variables for the edge group (= Hetzner CX22).
+
+# Edge does not run Docker — k3s containerd is enough.
+docker_install: false
+docker_compose_install: false
+
+# k3s on this node is the only server in the cluster.
+k3s_role: server
+k3s_server_node_ip: "{{ tailscale_ip }}"
+k3s_server_advertise_address: "{{ tailscale_ip }}"
+# Cilium replaces flannel; k3s ships kube-proxy, that's fine.
+k3s_server_disable_components:
+  - traefik
+  - servicelb
+  - metrics-server
+  - local-storage
+k3s_server_extra_args:
+  - "--flannel-backend=none"
+  - "--disable-network-policy"
+  - "--disable-kube-proxy=false"
+  - "--cluster-cidr={{ k3s_cluster_cidr }}"
+  - "--service-cidr={{ k3s_service_cidr }}"
+  - "--cluster-dns={{ k3s_cluster_dns }}"
+  - "--advertise-address={{ k3s_server_advertise_address }}"
+  - "--node-ip={{ k3s_server_node_ip }}"
+  - "--node-external-ip={{ k3s_server_node_ip }}"
+  - "--tls-san=edge.tailnet"
+  - "--tls-san=hs.psimaker.org"
+  - "--write-kubeconfig-mode=0640"
+  - "--node-label=topology.kubernetes.io/zone=hetzner-fsn1"
+  - "--node-label=node-role.kubernetes.io/control-plane=true"
+
+# Fetch a sanitised kubeconfig back to the operator's machine after install.
+k3s_fetch_kubeconfig: true
+k3s_kubeconfig_local_path: "{{ playbook_dir }}/../.local/kubeconfig"
+
+# Helper CLIs on the control-plane node.
+k3s_install_helm: true
+k3s_install_flux: true
+helm_version: "v3.16.3"
+flux_version: "v2.4.0"
+
+# Edge runs cloudflared as a host-level fallback, see role README.
+cloudflared_host_install: true
+
+# No restic on edge — it has no state worth backing up.
+restic_install: false
+
+# Promtail still useful for system journals on edge.
+promtail_scrape_docker: false
+promtail_scrape_paths:
+  - /var/log/syslog
+  - /var/log/auth.log

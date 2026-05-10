@@ -1,0 +1,55 @@
+---
+# Non-secret defaults shared by every host. Host- and group-specific
+# overrides live in inventory/group_vars/<group>.yml. Secrets live in
+# all.sops.yml — encrypted by SOPS, never in plaintext on disk.
+
+# --- Identity ---------------------------------------------------------------
+operator_user: umo
+operator_groups:
+  - sudo
+  - docker
+  - adm
+operator_ssh_keys:
+  # Pubkeys authorised for the operator account. Rotated by editing this list.
+  - "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINPLACEHOLDERoperatorpubkeyforumut.erdem"
+
+timezone: Europe/Zurich
+locale: en_US.UTF-8
+
+# --- Tailscale / Headscale --------------------------------------------------
+# Headscale URL — see the chicken-and-egg note in roles/tailscale_node/README.md.
+# On the very first bootstrap (Headscale not yet running in-cluster), point
+# this at a temporary tailscale.com control plane or skip the role.
+headscale_url: "https://hs.psimaker.org"
+tailscale_tags:
+  - "tag:node"
+tailscale_accept_routes: true
+
+# --- k3s --------------------------------------------------------------------
+k3s_version: "v1.31.4+k3s1"
+k3s_cluster_cidr: "10.42.0.0/16"
+k3s_service_cidr: "10.43.0.0/16"
+k3s_cluster_dns: "10.43.0.10"
+# `--server` value advertised to agents (Tailscale IP of the server node).
+k3s_server_url: "https://100.64.0.1:6443"
+
+# --- Observability ----------------------------------------------------------
+loki_push_url: "http://loki.observability.svc.cluster.local:3100/loki/api/v1/push"
+beszel_hub_url: "https://beszel.tailnet:8090"
+node_exporter_version: "1.8.2"
+node_exporter_listen_addr: "{{ tailscale_ip }}:9100"
+promtail_version: "3.3.2"
+beszel_agent_version: "0.10.0"
+
+# --- Cloudflared (edge fallback) -------------------------------------------
+cloudflared_version: "2024.12.2"
+
+# --- Restic / backups -------------------------------------------------------
+restic_version: "0.17.3"
+restic_schedule_oncalendar: "*-*-* 03:30:00 Europe/Zurich"
+restic_keep_daily: 14
+restic_keep_weekly: 8
+restic_keep_monthly: 6
+# Repos: primary (Hetzner Storage Box) and secondary (Backblaze B2 critical).
+restic_repository_primary: "sftp:u123456@u123456.your-storagebox.de:/restic"
+restic_repository_secondary: "b2:psimaker-restic-critical:airbase/"

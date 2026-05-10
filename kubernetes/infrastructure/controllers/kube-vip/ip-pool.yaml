@@ -1,0 +1,22 @@
+---
+# IP pool for kube-vip-cloud-provider.
+#
+# Range: 192.168.8.220-230 (11 addresses) on the home LAN. Reserved in the
+# router's static-IP table so DHCP never hands them out. ARP works because
+# airbase is the only k3s agent that bridges to the LAN — `edge` (Hetzner)
+# lives on a public IPv4 and never advertises these addresses.
+#
+# The cloud-provider keys ConfigMap entries by namespace + service name. We use
+# `range-global` for the catch-all, plus per-namespace overrides should we want
+# to pin specific services. Today the only consumer is cloudflared's
+# (intentional) Service LoadBalancer fallback, which is unused as long as the
+# tunnel is healthy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubevip
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+data:
+  range-global: 192.168.8.220-192.168.8.230

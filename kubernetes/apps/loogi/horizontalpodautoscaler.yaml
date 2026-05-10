@@ -1,0 +1,77 @@
+# HorizontalPodAutoscaler for LOOGI SearXNG.
+#
+# Autoscaling on two signals:
+#   1. CPU utilisation (standard kube-state metric, always available).
+#   2. A custom Prometheus metric: `loogi_request_rate` — the recording rule
+#      in prometheusrule-recording.yaml computes this from Traefik's
+#      per-service request counter and exposes it on the
+#      External/Pods-metrics adapter (kube-prometheus-adapter, installed in
+#      the observability tree).
+#
+# Why custom metric: CPU alone is a poor proxy for SearXNG load. Most of the
+# work is upstream-engine I/O wait, so CPU utilisation stays low while
+# request latency climbs. Scaling on actual request rate is what we want;
+# CPU is a backstop for cases where the request-rate adapter is unhealthy.
+#
+# Behaviour tuned to be conservative on scale-down (we keep capacity for the
+# next minute of bursty traffic) and aggressive on scale-up (a single
+# observation period is enough to add a pod when the SLO is at risk).
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: loogi
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    app.kubernetes.io/component: searxng
+    tier: tier-1
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: loogi
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Pods
+      pods:
+        metric:
+          name: loogi_request_rate
+        target:
+          # Target 30 req/s/pod. With burst:50 + average:100 on the Traefik
+          # rate limiter and 2 pods baseline, a sustained 60+ req/s would
+          # mean we're approaching the per-pod budget — at which point we
+          # add a pod. The recording rule averages over 1m to dampen noise.
+          type: AverageValue
+          averageValue: "30"
+  behavior:
+    scaleDown:
+      # Wait 5 minutes of stable below-target before scaling down. Keeps
+      # capacity warm for the typical "burst → quiet → burst" pattern.
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+        - type: Pods
+          value: 1
+          periodSeconds: 60
+      selectPolicy: Min
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+        - type: Pods
+          value: 2
+          periodSeconds: 30
+      selectPolicy: Max

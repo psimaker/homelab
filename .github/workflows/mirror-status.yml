@@ -1,0 +1,36 @@
+---
+name: mirror status
+
+# Single-step workflow whose job is to make the mirror's Actions tab useful:
+# it posts the canonical CI URL into the run summary so a visitor knows where
+# the real builds live.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+
+  pointer:
+    name: where the real CI lives
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write summary pointer
+        run: |
+          {
+            echo "## Source of truth"
+            echo
+            echo "This is the **mirror** of the homelab repository."
+            echo "The canonical source — and the only CI that gates merges — is hosted on Gitea:"
+            echo
+            echo "- **Gitea (canonical):** https://git.psimaker.org/umut.erdem/homelab"
+            echo "- **Production:** https://loogi.ch"
+            echo "- **Architecture overview:** [docs/architecture.md](../blob/main/docs/architecture.md)"
+            echo
+            echo "If you came here from a recruiter link or a profile sweep: welcome."
+            echo "If you want to file an issue, please open it against the Gitea instance."
+          } >> "${GITHUB_STEP_SUMMARY}"

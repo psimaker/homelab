@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  role_name: restic_host_job
+  author: psimaker
+  description: restic backups to Hetzner Storage Box + Backblaze B2 driven by a systemd timer.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+dependencies:
+  - role: baseline

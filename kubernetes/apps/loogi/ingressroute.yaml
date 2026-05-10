@@ -1,0 +1,159 @@
+# LOOGI Traefik IngressRoute.
+#
+# Public surface for loogi.ch. The Cloudflare Tunnel pod in the cloudflared
+# namespace forwards loogi.ch to the Traefik ClusterIP, Traefik routes here
+# via this IngressRoute, and the response makes the same trip in reverse.
+#
+# TLS:
+#   The certificate is issued by cert-manager via DNS-01 against Cloudflare.
+#   We reference the wildcard secret produced by the loogi-ch-tls Certificate
+#   resource in the traefik namespace. The Certificate resource itself lives
+#   in the infrastructure tree (kubernetes/infrastructure/controllers/cert-manager).
+#
+# Middlewares (order matters):
+#   1. redirect-to-https — http → https; defensive even though Cloudflare
+#      already does the redirect on the edge.
+#   2. rate-limit         — 100 req/min average, burst 50, per source IP.
+#      The X-Forwarded-For chain is trusted to the depth of the
+#      forwardedHeaders configuration on the Traefik EntryPoint (set in
+#      the infrastructure tree).
+#   3. secure-headers     — HSTS, content-type sniffing off, frame deny,
+#      referrer policy strict-origin.
+#
+# All three middleware objects are defined inline below to keep the loogi
+# tree self-contained. If a middleware ends up being reused by other apps,
+# move it to kubernetes/infrastructure/controllers/traefik/middlewares/.
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: loogi-redirect-https
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: loogi-rate-limit
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  rateLimit:
+    # 100 req/min average, ≈1.66 req/s. The SearXNG limiter (limiter.toml)
+    # already does per-link-token gating; this is the network-edge bucket
+    # that protects the cluster from misbehaving sources before SearXNG even
+    # sees the request.
+    average: 100
+    period: 1m
+    burst: 50
+    sourceCriterion:
+      ipStrategy:
+        # Strip the Cloudflare hop and the cloudflared hop so the bucket
+        # keys on the real client. depth=2 matches the X-Forwarded-For
+        # chain: client → CF → cloudflared → Traefik.
+        depth: 2
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: loogi-secure-headers
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  headers:
+    # HSTS: 2 years, subdomains included, preloadable.
+    stsSeconds: 63072000
+    stsIncludeSubdomains: true
+    stsPreload: true
+    forceSTSHeader: true
+    # Generic hardening — most of these are also set by SearXNG itself in
+    # default_http_headers, but Traefik should set them too in case the
+    # backend strips them or returns an error page that doesn't.
+    contentTypeNosniff: true
+    browserXssFilter: true
+    referrerPolicy: "strict-origin-when-cross-origin"
+    frameDeny: true
+    permissionsPolicy: "geolocation=(), microphone=(), camera=()"
+    customResponseHeaders:
+      X-Robots-Tag: "noindex, nofollow"
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: loogi
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`loogi.ch`) || Host(`www.loogi.ch`)
+      priority: 100
+      middlewares:
+        - name: loogi-secure-headers
+          namespace: loogi
+        - name: loogi-rate-limit
+          namespace: loogi
+      services:
+        - name: loogi
+          namespace: loogi
+          port: 80
+          # SearXNG handles its own keep-alive; no special pass-through
+          # required. PassHostHeader so the upstream sees `loogi.ch` rather
+          # than the cluster service name.
+          passHostHeader: true
+  tls:
+    secretName: loogi-ch-tls
+    options:
+      # References the TLSOption named `modern` in the traefik namespace
+      # (defined in kubernetes/infrastructure/controllers/traefik). TLS 1.2+,
+      # modern cipher suites only.
+      name: modern
+      namespace: traefik
+---
+# Plain-HTTP entrypoint just to redirect to HTTPS. Cloudflare already does
+# this at the edge, but having the redirect here too means a direct hit on
+# the Tunnel (e.g. from `curl --resolve`) still gets a 308 instead of a
+# 404 from a Traefik with no matching route.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: loogi-http-redirect
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`loogi.ch`) || Host(`www.loogi.ch`)
+      middlewares:
+        - name: loogi-redirect-https
+          namespace: loogi
+      services:
+        # Traefik IngressRoute requires a service even when only redirecting;
+        # it's never actually reached because the redirect middleware
+        # short-circuits the chain.
+        - name: loogi
+          namespace: loogi
+          port: 80

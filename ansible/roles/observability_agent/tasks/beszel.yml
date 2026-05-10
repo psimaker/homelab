@@ -1,0 +1,62 @@
+---
+- name: Ensure beszel-agent user exists
+  ansible.builtin.user:
+    name: "{{ beszel_agent_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: /var/lib/beszel-agent
+    create_home: true
+    state: present
+
+- name: Initialise beszel-agent status facts
+  ansible.builtin.set_fact:
+    _beszel_installed: { stdout: "" }
+
+- name: Detect installed beszel-agent version
+  ansible.builtin.command: "{{ beszel_agent_install_dir }}/beszel-agent -version"
+  register: _beszel_installed
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Set beszel-agent download facts
+  ansible.builtin.set_fact:
+    _beszel_url: "https://github.com/henrygd/beszel/releases/download/v{{ beszel_agent_version }}/beszel-agent_linux_amd64.tar.gz"
+    _beszel_archive: "/tmp/beszel-agent-{{ beszel_agent_version }}.tar.gz"
+    _beszel_needs_update: "{{ beszel_agent_version not in (_beszel_installed.stdout | string) }}"
+
+- name: Download beszel-agent release
+  ansible.builtin.get_url:
+    url: "{{ _beszel_url }}"
+    dest: "{{ _beszel_archive }}"
+    mode: "0644"
+  when: _beszel_needs_update | bool
+
+- name: Unpack beszel-agent binary
+  ansible.builtin.unarchive:
+    src: "{{ _beszel_archive }}"
+    dest: "{{ beszel_agent_install_dir }}"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+    include:
+      - beszel-agent
+  when: _beszel_needs_update | bool
+  notify: Restart beszel-agent
+
+- name: Render beszel-agent systemd unit
+  ansible.builtin.template:
+    src: beszel-agent.service.j2
+    dest: /etc/systemd/system/beszel-agent.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart beszel-agent
+
+- name: Enable beszel-agent (started only when hub key is configured)
+  ansible.builtin.systemd:
+    name: beszel-agent
+    enabled: true
+    state: "{{ 'started' if beszel_agent_hub_public_key | length > 0 else 'stopped' }}"
+    daemon_reload: true

@@ -1,0 +1,29 @@
+---
+# Traefik Middleware that other IngressRoutes attach to gate access. The flow:
+#
+#   user → Traefik IngressRoute (with this middleware)
+#     ↓ first request, no session cookie
+#   Traefik calls /api/auth/forward at tinyauth (in-cluster)
+#     ↓ no session
+#   tinyauth redirects to https://auth.tailnet/login → Pocket-ID OIDC dance
+#     ↓ on success
+#   tinyauth sets a session cookie scoped to *.tailnet
+#   Traefik now lets the request through on subsequent calls
+#
+# Routes attach this by adding to their `middlewares:`:
+#   - name: tinyauth-forward-auth
+#     namespace: identity
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: tinyauth-forward-auth
+  namespace: identity
+spec:
+  forwardAuth:
+    address: http://tinyauth.identity.svc.cluster.local:3000/api/auth/traefik
+    trustForwardHeader: true
+    authResponseHeaders:
+      - Remote-User
+      - Remote-Email
+      - Remote-Name
+      - Remote-Groups

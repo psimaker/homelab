@@ -1,0 +1,148 @@
+---
+- name: Initialise restic status facts
+  ansible.builtin.set_fact:
+    _restic_installed: { stdout: "" }
+
+- name: Detect installed restic version
+  ansible.builtin.command: "{{ restic_install_dir }}/restic version"
+  register: _restic_installed
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Set restic download facts
+  ansible.builtin.set_fact:
+    _restic_url: "https://github.com/restic/restic/releases/download/v{{ restic_version }}/restic_{{ restic_version }}_linux_amd64.bz2"
+    _restic_archive: "/tmp/restic_{{ restic_version }}_linux_amd64.bz2"
+    _restic_needs_update: "{{ restic_version not in (_restic_installed.stdout | string) }}"
+
+- name: Ensure bzip2 is available
+  ansible.builtin.apt:
+    name: bzip2
+    state: present
+
+- name: Download restic release
+  ansible.builtin.get_url:
+    url: "{{ _restic_url }}"
+    dest: "{{ _restic_archive }}"
+    mode: "0644"
+  when: _restic_needs_update | bool
+
+- name: Decompress restic binary
+  ansible.builtin.command:
+    cmd: "bunzip2 --keep --force {{ _restic_archive }}"
+    creates: "{{ _restic_archive | regex_replace('\\.bz2$', '') }}"
+  when: _restic_needs_update | bool
+
+- name: Install restic binary
+  ansible.builtin.copy:
+    src: "{{ _restic_archive | regex_replace('\\.bz2$', '') }}"
+    dest: "{{ restic_install_dir }}/restic"
+    remote_src: true
+    owner: root
+    group: root
+    mode: "0755"
+  when: _restic_needs_update | bool
+
+- name: Ensure restic directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0750"
+  loop:
+    - "{{ restic_config_dir }}"
+    - "{{ restic_state_dir }}"
+    - "{{ restic_log_dir }}"
+    - "{{ restic_config_dir }}/excludes.d"
+
+- name: Render restic environment file
+  ansible.builtin.template:
+    src: restic.env.j2
+    dest: "{{ restic_config_dir }}/restic.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Render restic exclude file
+  ansible.builtin.template:
+    src: excludes.j2
+    dest: "{{ restic_config_dir }}/excludes.d/default.exclude"
+    owner: root
+    group: root
+    mode: "0640"
+
+- name: Render restic backup script
+  ansible.builtin.template:
+    src: restic-backup.sh.j2
+    dest: "{{ restic_install_dir }}/restic-backup"
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Render restic systemd service unit
+  ansible.builtin.template:
+    src: restic-backup.service.j2
+    dest: /etc/systemd/system/restic-backup.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Render restic systemd timer unit
+  ansible.builtin.template:
+    src: restic-backup.timer.j2
+    dest: /etc/systemd/system/restic-backup.timer
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload systemd
+
+- name: Initialise primary restic repository if missing
+  ansible.builtin.command: "{{ restic_install_dir }}/restic --repo {{ restic_repository_primary }} cat config"
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  register: _restic_primary_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Run restic init for primary repository
+  ansible.builtin.command: "{{ restic_install_dir }}/restic --repo {{ restic_repository_primary }} init"
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+  when: _restic_primary_check.rc != 0
+  no_log: true
+  changed_when: true
+
+- name: Initialise secondary (B2) restic repository if missing
+  ansible.builtin.command: "{{ restic_install_dir }}/restic --repo {{ restic_repository_secondary }} cat config"
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+    B2_ACCOUNT_ID: "{{ restic_b2_account_id }}"
+    B2_ACCOUNT_KEY: "{{ restic_b2_account_key }}"
+  register: _restic_secondary_check
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Run restic init for secondary (B2) repository
+  ansible.builtin.command: "{{ restic_install_dir }}/restic --repo {{ restic_repository_secondary }} init"
+  environment:
+    RESTIC_PASSWORD: "{{ restic_password }}"
+    B2_ACCOUNT_ID: "{{ restic_b2_account_id }}"
+    B2_ACCOUNT_KEY: "{{ restic_b2_account_key }}"
+  when: _restic_secondary_check.rc != 0
+  no_log: true
+  changed_when: true
+
+- name: Enable and start restic-backup.timer
+  ansible.builtin.systemd:
+    name: restic-backup.timer
+    enabled: true
+    state: started
+    daemon_reload: true

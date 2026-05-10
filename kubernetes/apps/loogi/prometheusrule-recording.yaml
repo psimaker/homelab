@@ -1,0 +1,133 @@
+# Prometheus recording rules feeding the LOOGI SLOs and the HPA custom metric.
+#
+# Why recording rules:
+#   * The SLO queries in slos.yaml reference these names so they can be
+#     edited centrally — change the Traefik service label or window once,
+#     not in every SLI expression.
+#   * The HPA reads `loogi_request_rate` from the prometheus-adapter; it
+#     needs to be a stable, low-cost query.
+#   * Multi-window-multi-burn-rate alerts (Sloth-generated) need pre-baked
+#     5m / 30m / 1h / 6h windows. Sloth handles the SLO-side; we handle the
+#     base SLIs here.
+#
+# Traefik label note:
+#   The metric label that identifies the LOOGI service is
+#   `service="loogi-loogi-80@kubernetescrd"` — Traefik's auto-generated
+#   provider name for an IngressRoute service. If the Service or namespace
+#   is renamed, this label changes and these rules silently stop firing.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: loogi-recording
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+    release: kube-prometheus-stack
+    prometheus: kube-prometheus-stack
+spec:
+  groups:
+    # ----- Request-rate aggregations ---------------------------------------
+    - name: loogi.requests
+      interval: 30s
+      rules:
+        # Total request rate to LOOGI through Traefik, regardless of code.
+        - record: loogi:traefik_requests:rate5m
+          expr: |
+            sum(rate(traefik_service_requests_total{
+              service="loogi-loogi-80@kubernetescrd"
+            }[5m]))
+          labels:
+            tier: tier-1
+            app: loogi
+
+        # 5xx rate — feeds the availability SLI directly.
+        - record: loogi:traefik_requests_5xx:rate5m
+          expr: |
+            sum(rate(traefik_service_requests_total{
+              service="loogi-loogi-80@kubernetescrd",
+              code=~"5.."
+            }[5m]))
+          labels:
+            tier: tier-1
+            app: loogi
+
+        # Per-pod request rate exposed to the HPA (prometheus-adapter exposes
+        # this as `pods/loogi_request_rate`). Divide by the live pod count
+        # so the HPA's targetAverageValue maths is straightforward.
+        - record: loogi_request_rate
+          expr: |
+            sum(rate(traefik_service_requests_total{
+              service="loogi-loogi-80@kubernetescrd"
+            }[1m]))
+            /
+            scalar(
+              sum(kube_deployment_status_replicas_available{
+                namespace="loogi", deployment="loogi"
+              })
+            )
+          labels:
+            tier: tier-1
+            app: loogi
+
+    # ----- Latency aggregations -------------------------------------------
+    - name: loogi.latency
+      interval: 30s
+      rules:
+        # Requests served within 800ms — the latency SLO threshold.
+        - record: loogi:traefik_latency_good:rate5m
+          expr: |
+            sum(rate(traefik_service_request_duration_seconds_bucket{
+              service="loogi-loogi-80@kubernetescrd",
+              le="0.8"
+            }[5m]))
+          labels:
+            tier: tier-1
+            app: loogi
+
+        # Total request count that contributes to the latency histogram.
+        # Used as the SLI denominator.
+        - record: loogi:traefik_latency_total:rate5m
+          expr: |
+            sum(rate(traefik_service_request_duration_seconds_count{
+              service="loogi-loogi-80@kubernetescrd"
+            }[5m]))
+          labels:
+            tier: tier-1
+            app: loogi
+
+        # Convenience: p95 over 5 minutes for dashboards. Not used by the
+        # SLO directly (the SLO uses the events form), but useful in
+        # Grafana panels next to the SLO burn-rate panels.
+        - record: loogi:traefik_latency:p95_5m
+          expr: |
+            histogram_quantile(0.95,
+              sum by (le) (
+                rate(traefik_service_request_duration_seconds_bucket{
+                  service="loogi-loogi-80@kubernetescrd"
+                }[5m])
+              )
+            )
+          labels:
+            tier: tier-1
+            app: loogi
+
+    # ----- Blackbox-probe aggregations -------------------------------------
+    - name: loogi.blackbox
+      interval: 30s
+      rules:
+        - record: loogi:probe_success:rate5m
+          expr: |
+            avg_over_time(probe_success{target="loogi-public"}[5m])
+          labels:
+            tier: tier-1
+            app: loogi
+
+        - record: loogi:probe_duration:p95_5m
+          expr: |
+            quantile_over_time(0.95, probe_duration_seconds{target="loogi-public"}[5m])
+          labels:
+            tier: tier-1
+            app: loogi

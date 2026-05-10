@@ -1,0 +1,198 @@
+services:
+  paperless-redis:
+    # renovate: datasource=docker
+    image: ${REDIS_IMAGE}
+    container_name: paperless-redis
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --save
+      - "60"
+      - "1000"
+    volumes:
+      - /data/paperless/runtime/redis:/data
+    networks:
+      - paperless-internal
+
+  paperless-db:
+    # renovate: datasource=docker
+    image: ${POSTGRES_IMAGE}
+    container_name: paperless-db
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    environment:
+      TZ: ${TZ}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - /data/paperless/runtime/postgres:/var/lib/postgresql/data
+    networks:
+      - paperless-internal
+
+  paperless-tika:
+    # renovate: datasource=docker
+    image: ${TIKA_IMAGE}
+    container_name: paperless-tika
+    restart: unless-stopped
+    profiles:
+      - optional-doc-conversion
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    volumes:
+      - /data/paperless/runtime/tika:/tmp
+    networks:
+      - paperless-internal
+
+  paperless-gotenberg:
+    # renovate: datasource=docker
+    image: ${GOTENBERG_IMAGE}
+    container_name: paperless-gotenberg
+    restart: unless-stopped
+    profiles:
+      - optional-doc-conversion
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    command:
+      - gotenberg
+      - --chromium-disable-javascript=true
+      - --chromium-allow-list=file:///tmp/.*
+    volumes:
+      - /data/paperless/runtime/gotenberg:/tmp
+    networks:
+      - paperless-internal
+
+  paperless-web:
+    # renovate: datasource=docker
+    image: ${PAPERLESS_IMAGE}
+    container_name: paperless-web
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    depends_on:
+      - paperless-db
+      - paperless-redis
+    environment:
+      TZ: ${TZ}
+      USERMAP_UID: ${USERMAP_UID}
+      USERMAP_GID: ${USERMAP_GID}
+      PAPERLESS_REDIS: ${PAPERLESS_REDIS}
+      PAPERLESS_DBHOST: ${PAPERLESS_DBHOST}
+      PAPERLESS_DBPORT: ${PAPERLESS_DBPORT}
+      PAPERLESS_DBNAME: ${PAPERLESS_DBNAME}
+      PAPERLESS_DBUSER: ${PAPERLESS_DBUSER}
+      PAPERLESS_DBPASS: ${PAPERLESS_DBPASS}
+      PAPERLESS_URL: ${PAPERLESS_URL}
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+      PAPERLESS_ALLOWED_HOSTS: ${PAPERLESS_ALLOWED_HOSTS}
+      PAPERLESS_CSRF_TRUSTED_ORIGINS: ${PAPERLESS_CSRF_TRUSTED_ORIGINS}
+      PAPERLESS_CORS_ALLOWED_HOSTS: ${PAPERLESS_CORS_ALLOWED_HOSTS}
+      PAPERLESS_USE_X_FORWARD_HOST: ${PAPERLESS_USE_X_FORWARD_HOST}
+      PAPERLESS_PROXY_SSL_HEADER: ${PAPERLESS_PROXY_SSL_HEADER}
+      PAPERLESS_ACCOUNT_DEFAULT_HTTP_PROTOCOL: ${PAPERLESS_ACCOUNT_DEFAULT_HTTP_PROTOCOL}
+      PAPERLESS_TIME_ZONE: ${PAPERLESS_TIME_ZONE}
+      PAPERLESS_OCR_LANGUAGE: ${PAPERLESS_OCR_LANGUAGE}
+      PAPERLESS_OCR_LANGUAGES: ${PAPERLESS_OCR_LANGUAGES}
+      PAPERLESS_DATE_PARSER_LANGUAGES: ${PAPERLESS_DATE_PARSER_LANGUAGES}
+      PAPERLESS_TASK_WORKERS: ${PAPERLESS_TASK_WORKERS}
+      PAPERLESS_THREADS_PER_WORKER: ${PAPERLESS_THREADS_PER_WORKER}
+      PAPERLESS_WEBSERVER_WORKERS: ${PAPERLESS_WEBSERVER_WORKERS}
+      PAPERLESS_AUDIT_LOG_ENABLED: ${PAPERLESS_AUDIT_LOG_ENABLED}
+      PAPERLESS_CONSUMER_RECURSIVE: ${PAPERLESS_CONSUMER_RECURSIVE}
+      PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS: ${PAPERLESS_CONSUMER_SUBDIRS_AS_TAGS}
+      PAPERLESS_CONSUMER_DELETE_DUPLICATES: ${PAPERLESS_CONSUMER_DELETE_DUPLICATES}
+      PAPERLESS_TIKA_ENABLED: ${PAPERLESS_TIKA_ENABLED}
+      PAPERLESS_TIKA_ENDPOINT: ${PAPERLESS_TIKA_ENDPOINT}
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: ${PAPERLESS_TIKA_GOTENBERG_ENDPOINT}
+    volumes:
+      - /data/paperless/runtime/paperless/data:/usr/src/paperless/data
+      - /data/paperless/runtime/paperless/media:/usr/src/paperless/media
+      - /data/paperless/runtime/paperless/export:/usr/src/paperless/export
+      - /data/paperless/runtime/paperless/consume:/usr/src/paperless/consume
+    expose:
+      - "8000"
+    networks:
+      - paperless-internal
+      - proxy-net
+
+  paperless-gpt:
+    # renovate: datasource=docker
+    image: ${PAPERLESS_GPT_IMAGE}
+    container_name: paperless-gpt
+    restart: unless-stopped
+    profiles:
+      - ai
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    depends_on:
+      paperless-web:
+        condition: service_healthy
+    environment:
+      TZ: ${TZ}
+
+      # Paperless connection
+      PAPERLESS_BASE_URL: ${PAPERLESS_BASE_URL}
+      PAPERLESS_PUBLIC_URL: ${PAPERLESS_PUBLIC_URL}
+      PAPERLESS_API_TOKEN: ${PAPERLESS_API_TOKEN}
+
+      # paperless-gpt processing tags
+      MANUAL_TAG: ${MANUAL_TAG}
+      AUTO_TAG: ${AUTO_TAG}
+
+      # Optional compatibility / semantic tags
+      REVIEW_TAG: ${PAPERLESS_GPT_REVIEW_TAG}
+      COMPLETE_TAG: ${PAPERLESS_GPT_DONE_TAG}
+      NEEDS_REVIEW_TAG: ${PAPERLESS_GPT_NEEDS_REVIEW_TAG}
+
+      # Safety settings
+      CREATE_NEW_TAGS: ${CREATE_NEW_TAGS}
+      AUTO_GENERATE_TITLE: ${AUTO_GENERATE_TITLE}
+      AUTO_GENERATE_TAGS: ${AUTO_GENERATE_TAGS}
+      AUTO_GENERATE_CORRESPONDENTS: ${AUTO_GENERATE_CORRESPONDENTS}
+      AUTO_GENERATE_DOCUMENT_TYPE: ${AUTO_GENERATE_DOCUMENT_TYPE}
+      AUTO_GENERATE_CREATED_DATE: ${AUTO_GENERATE_CREATED_DATE}
+      PDF_UPLOAD: ${PDF_UPLOAD}
+      PDF_REPLACE: ${PDF_REPLACE}
+      PDF_COPY_METADATA: ${PDF_COPY_METADATA}
+      PDF_OCR_TAGGING: ${PDF_OCR_TAGGING}
+      PDF_OCR_COMPLETE_TAG: ${PDF_OCR_COMPLETE_TAG}
+      PDF_SKIP_EXISTING_OCR: ${PDF_SKIP_EXISTING_OCR}
+
+      # LLM settings
+      LLM_PROVIDER: ${LLM_PROVIDER}
+      LLM_MODEL: ${LLM_MODEL}
+      LLM_LANGUAGE: ${LLM_LANGUAGE}
+      LLM_REQUESTS_PER_MINUTE: ${LLM_REQUESTS_PER_MINUTE}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES}
+      LLM_BACKOFF_MAX_WAIT: ${LLM_BACKOFF_MAX_WAIT}
+      TOKEN_LIMIT: ${TOKEN_LIMIT}
+      LOG_LEVEL: ${LOG_LEVEL}
+      LISTEN_INTERFACE: ${LISTEN_INTERFACE}
+
+      # DeepSeek via OpenAI-compatible API
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL}
+      OPENAI_API_TYPE: ${OPENAI_API_TYPE}
+
+      # Other optional providers
+      OLLAMA_HOST: ${OLLAMA_HOST}
+      GOOGLEAI_API_KEY: ${GOOGLEAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      MISTRAL_API_KEY: ${MISTRAL_API_KEY}
+    volumes:
+      - /data/paperless/runtime/paperless-gpt:/app/data
+      - /data/paperless/runtime/paperless-gpt/prompts:/app/prompts
+    networks:
+      - paperless-internal
+      - proxy-net
+
+networks:
+  paperless-internal:
+    driver: bridge
+  proxy-net:
+    external: true

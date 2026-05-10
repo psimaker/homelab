@@ -1,0 +1,27 @@
+services:
+  arcane:
+    # renovate: datasource=docker
+    image: ghcr.io/getarcaneapp/arcane:latest
+    container_name: arcane
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3552:3552"
+    environment:
+      - APP_URL=https://arcane.psimaker.org
+      - PUID=1000
+      - PGID=1000
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - arcane-data:/app/data
+      - /data:/data
+    networks:
+      - proxy-net
+
+networks:
+  proxy-net:
+    external: true
+
+volumes:
+  arcane-data:

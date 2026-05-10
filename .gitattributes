@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+# Keep encrypted SOPS files binary-safe in diffs
+*.sops.yaml -diff
+*.sops.json -diff
+*.tfvars.sops.json -diff
+
+# Generated charts don't need diffs
+**/charts/**/*.tgz binary
+
+# Mark scripts as executable on checkout
+*.sh text eol=lf

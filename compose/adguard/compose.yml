@@ -1,0 +1,13 @@
+services:
+  adguard:
+    # renovate: datasource=docker
+    image: adguard/adguardhome:latest
+    container_name: adguardhome
+    restart: unless-stopped
+    network_mode: host          # DNS server needs raw access to bind :53 and
+                                # to see real client IPs in query logs
+    volumes:
+      - ./conf:/opt/adguardhome/conf
+      - ./work:/opt/adguardhome/work
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"

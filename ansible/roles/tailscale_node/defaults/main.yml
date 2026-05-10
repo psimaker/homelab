@@ -1,0 +1,19 @@
+---
+tailscale_apt_repo_url: "https://pkgs.tailscale.com/stable/debian"
+tailscale_apt_repo_key_url: "https://pkgs.tailscale.com/stable/debian/bookworm.noarmor.gpg"
+tailscale_apt_repo_keyring: /etc/apt/keyrings/tailscale-archive-keyring.gpg
+tailscale_apt_repo_list_url: "https://pkgs.tailscale.com/stable/debian/bookworm.tailscale-keyring.list"
+
+tailscale_packages:
+  - tailscale
+
+# `tailscale up` arguments. The pre-auth key is read from SOPS, never logged.
+# Set `headscale_url` (group_vars/all.yml) to your Headscale URL. The first
+# bootstrap, when Headscale is not yet running, is documented in the README.
+tailscale_login_server: "{{ headscale_url }}"
+tailscale_advertise_tags: "{{ tailscale_tags | default(['tag:node']) | join(',') }}"
+tailscale_accept_routes_flag: "{{ tailscale_accept_routes | default(true) | bool }}"
+
+# State flag — when this file's mtime is newer than `/etc/tailscale.up.flag`,
+# the role re-runs `tailscale up`.
+tailscale_state_flag: /etc/tailscale.up.flag

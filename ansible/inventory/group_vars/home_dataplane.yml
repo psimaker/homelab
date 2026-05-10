@@ -1,0 +1,51 @@
+---
+# Variables for the home_dataplane group (= airbase).
+
+# Docker stays the source of truth for Tier-2; we only manage the daemon.
+docker_install: true
+docker_compose_install: true
+docker_users:
+  - "{{ operator_user }}"
+docker_external_networks:
+  - proxy-net
+
+# k3s on this node is an agent that joins edge.
+k3s_role: agent
+k3s_agent_node_ip: "{{ tailscale_ip }}"
+k3s_agent_external_ip: "{{ tailscale_ip }}"
+# overlayfs matches Docker's snapshotter so the two coexist.
+k3s_agent_extra_args:
+  - "--snapshotter=overlayfs"
+  - "--node-ip={{ tailscale_ip }}"
+  - "--node-external-ip={{ tailscale_ip }}"
+  - "--node-label=topology.kubernetes.io/zone=home-ch"
+  - "--node-label=node-role.kubernetes.io/dataplane=true"
+
+# Promtail tails Docker container logs in addition to the system journals.
+promtail_scrape_docker: true
+promtail_scrape_paths:
+  - /var/log/syslog
+  - /var/log/auth.log
+
+# Restic backups run on this node — Tier-2 owns the state.
+restic_install: true
+restic_backup_paths:
+  - /data/loogi
+  - /data/gitea
+  - /data/vaultwarden
+  - /data/paperless
+  - /data/n8n
+  - /data/syncthing
+restic_exclude_paths:
+  - /data/plex
+  - /data/rr/data
+  - /data/nextcloud-aio/nextcloud_aio_volumes/nextcloud_aio_nextcloud_data
+  - /mnt/hdd
+restic_exclude_patterns:
+  - "*.tmp"
+  - "*.log"
+  - "__pycache__"
+
+# This node only runs the Cloudflare Tunnel daemon if the in-cluster pod is
+# unhealthy — see roles/cloudflared_host/. Off on airbase.
+cloudflared_host_install: false

@@ -1,0 +1,43 @@
+---
+# Default StorageClass override. The Helm chart ships a `longhorn` StorageClass
+# already; we re-declare it here with annotations matching our policy and
+# explicit reclaim+sync behaviours.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "1"
+  staleReplicaTimeout: "30"
+  fromBackup: ""
+  fsType: "ext4"
+  dataLocality: "best-effort"
+  recurringJobSelector: |
+    [
+      {"name":"snapshot-6h","isGroup":false},
+      {"name":"backup-daily","isGroup":false}
+    ]
+---
+# Optional 2-replica class for small workloads where the cross-DC latency
+# is bearable (e.g. Pocket-ID's SQLite). Workloads opt in via PVC's
+# storageClassName. Most stay on the default 1-replica class.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: longhorn-replicated
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "2"
+  staleReplicaTimeout: "30"
+  fromBackup: ""
+  fsType: "ext4"
+  dataLocality: "best-effort"

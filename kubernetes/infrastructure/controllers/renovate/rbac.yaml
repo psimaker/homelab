@@ -1,0 +1,28 @@
+---
+# Renovate doesn't talk to the Kubernetes API. The Role+RoleBinding below grants
+# the absolute minimum so kubelet/eviction-API behaviour is uniform with other
+# pods in the namespace; nothing privileged.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: renovate
+  namespace: renovate
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+    resourceNames: ["renovate-config"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: renovate
+  namespace: renovate
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: renovate
+subjects:
+  - kind: ServiceAccount
+    name: renovate
+    namespace: renovate

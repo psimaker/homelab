@@ -1,0 +1,65 @@
+---
+name: mirror-github
+
+# Mirrors this Gitea repository to github.com/psimaker/homelab.
+#
+# Triggers:
+#   - every push (so the public mirror lags by at most one CI run)
+#   - every 6h cron, to self-heal if a previous push was network-flaky
+#
+# This workflow does NOT need SOPS — it operates on encrypted blobs only.
+# It does need GH_MIRROR_TOKEN: a fine-grained PAT with `contents:write`
+# scope on github.com/psimaker/homelab.
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["**"]
+  schedule:
+    - cron: "0 */6 * * *"     # every 6 hours, on the hour
+  workflow_dispatch: {}
+
+concurrency:
+  group: mirror-github
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+
+  mirror:
+    name: git push --mirror github
+    runs-on: self-hosted
+    steps:
+      - name: Checkout (full clone, all refs)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # We need every ref so --mirror reflects them all.
+          fetch-tags: true
+
+      - name: Configure git identity
+        run: |
+          git config --global user.name "homelab-mirror-bot"
+          git config --global user.email "noreply@psimaker.org"
+
+      - name: Add GitHub remote (with token)
+        env:
+          GH_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "::error::GH_MIRROR_TOKEN not set in repo secrets"
+            exit 1
+          fi
+          # Inject the token as the user portion of the URL — never logged.
+          git remote remove github 2>/dev/null || true
+          git remote add github "https://x-access-token:${GH_TOKEN}@github.com/psimaker/homelab.git"
+
+      - name: Push --mirror
+        run: |
+          set -euo pipefail
+          # --mirror replicates ALL refs (heads, tags, notes) and force-updates
+          # them. The public mirror is read-only on the operator's side.
+          git push --mirror github

@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  role_name: tailscale_node
+  author: psimaker
+  description: Install Tailscale and enrol the node against Headscale via a SOPS-supplied pre-auth key.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+dependencies:
+  - role: baseline

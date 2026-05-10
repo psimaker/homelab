@@ -1,0 +1,28 @@
+services:
+  watchtower:
+    # renovate: datasource=docker
+    image: nickfedor/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    networks:
+      - default
+      - proxy-net
+    environment:
+      - TZ=Europe/Berlin
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_SCHEDULE=0 0 4 */3 * *
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_ROLLING_RESTART=false
+      - WATCHTOWER_INCLUDE_STOPPED=false
+      - WATCHTOWER_TIMEOUT=60s
+      - WATCHTOWER_NOTIFICATION_URL=${WATCHTOWER_NTFY_URL}
+      - WATCHTOWER_NOTIFICATION_REPORT=true
+      - WATCHTOWER_NO_STARTUP_MESSAGE=true
+      - WATCHTOWER_NOTIFICATIONS_HOSTNAME=airbase
+      - "WATCHTOWER_NOTIFICATION_TEMPLATE={{- if .Report -}}{{- with .Report -}}{{- if ( or .Updated .Failed ) -}}\n{{len .Updated}} updated{{if .Failed}} / {{len .Failed}} failed{{end}}{{if .Skipped}} / {{len .Skipped}} skipped{{end}}\n{{range .Updated}}\n  ✓ {{.Name}}\n    {{.ImageName}}\n    {{.CurrentImageID.ShortID}} → {{.LatestImageID.ShortID}}\n{{- end}}\n{{range .Failed}}\n  ✗ {{.Name}}: {{.Error}}\n{{- end}}\n{{- end}}{{- end}}{{- else}}{{range .Entries}}{{.Message}}\n{{end}}{{- end -}}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  proxy-net:
+    external: true

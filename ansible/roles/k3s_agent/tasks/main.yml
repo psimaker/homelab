@@ -1,0 +1,65 @@
+---
+- name: Ensure k3s config directory exists
+  ansible.builtin.file:
+    path: "{{ k3s_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Render k3s agent config.yaml
+  ansible.builtin.template:
+    src: agent-config.yaml.j2
+    dest: "{{ k3s_config_path }}"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart k3s-agent
+
+- name: Fetch k3s install script
+  ansible.builtin.get_url:
+    url: "{{ k3s_install_script_url }}"
+    dest: "{{ k3s_install_script_path }}"
+    mode: "0755"
+
+- name: Detect installed k3s version
+  ansible.builtin.command: /usr/local/bin/k3s --version
+  register: _k3s_installed_version
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Wait for the k3s server to be reachable on Tailscale
+  ansible.builtin.wait_for:
+    host: "{{ k3s_server_url | regex_replace('^https://', '') | regex_replace(':[0-9]+$', '') }}"
+    port: 6443
+    timeout: 120
+
+- name: Install or upgrade k3s agent
+  ansible.builtin.command: "{{ k3s_install_script_path }}"
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    INSTALL_K3S_EXEC: "agent"
+    K3S_URL: "{{ k3s_server_url }}"
+    K3S_TOKEN: "{{ k3s_token }}"
+  when: k3s_version not in (_k3s_installed_version.stdout | default(''))
+  register: _k3s_install
+  changed_when: _k3s_install.rc == 0
+  no_log: true
+
+- name: Ensure k3s-agent service is enabled and running
+  ansible.builtin.systemd:
+    name: k3s-agent
+    enabled: true
+    state: started
+
+- name: Wait for the agent to register against the server
+  ansible.builtin.command:
+    cmd: "k3s kubectl --server={{ k3s_server_url }} --insecure-skip-tls-verify=true --token={{ k3s_token }} get node {{ inventory_hostname }} -o name"
+  delegate_to: "{{ groups['edge'][0] }}"
+  register: _k3s_node_check
+  retries: 30
+  delay: 4
+  until: _k3s_node_check.rc == 0
+  changed_when: false
+  no_log: true

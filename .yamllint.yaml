@@ -1,0 +1,26 @@
+---
+extends: default
+
+rules:
+  line-length:
+    max: 160
+    level: warning
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
+  document-start: disable
+  truthy:
+    check-keys: false
+  braces:
+    max-spaces-inside: 1
+    level: error
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+
+ignore: |
+  kubernetes/flux-system/
+  **/charts/
+  **/.terraform/
+  **/*sops*.yaml
+  ansible/.galaxy_install_info

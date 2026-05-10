@@ -1,0 +1,22 @@
+# Managed by Ansible — roles/observability_agent. Do not edit by hand.
+[Unit]
+Description=Promtail (log shipper to in-cluster Loki via Tailscale)
+Documentation=https://grafana.com/docs/loki/latest/clients/promtail/
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+User={{ promtail_user }}
+Group={{ promtail_user }}
+ExecStart={{ promtail_install_dir }}/promtail -config.file={{ promtail_config_path }}
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths={{ promtail_positions_path | dirname }}
+
+[Install]
+WantedBy=multi-user.target

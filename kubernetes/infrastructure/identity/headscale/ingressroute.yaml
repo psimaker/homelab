@@ -1,0 +1,54 @@
+---
+# Headscale public IngressRoute — hs.psimaker.org. Public because nodes need
+# the control-plane endpoint reachable to bootstrap; once joined, the actual
+# data plane is direct WireGuard between peers, no traffic flows through
+# Headscale itself.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: headscale
+  namespace: identity
+  annotations:
+    homelab.psimaker.org/exposure: public
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`hs.psimaker.org`)
+      kind: Rule
+      services:
+        - name: headscale
+          port: 8080
+      middlewares:
+        - name: secure-headers
+          namespace: traefik
+        - name: rate-limit
+          namespace: traefik
+  tls:
+    secretName: wildcard-psimaker-org-tls
+---
+# DERP STUN endpoint (UDP 3478) — exposed via a LoadBalancer Service from
+# kube-vip if NAT traversal is needed for distant clients. We start without
+# this; Tailscale's hosted DERP fleet is a fine fallback.
+#
+# To enable: uncomment the Service below and set `derp.server.enabled=true`
+# in headscale values (already true). LB IP comes from kube-vip's pool
+# (192.168.8.220-230). DNS for `derp.tailnet` then maps to that IP for
+# tailnet clients via AdGuardHome split-horizon.
+#
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: headscale-derp
+#   namespace: identity
+#   annotations:
+#     kube-vip.io/loadbalancerIPs: 192.168.8.221
+# spec:
+#   type: LoadBalancer
+#   selector:
+#     app.kubernetes.io/name: headscale
+#   ports:
+#     - name: stun
+#       port: 3478
+#       targetPort: 3478
+#       protocol: UDP

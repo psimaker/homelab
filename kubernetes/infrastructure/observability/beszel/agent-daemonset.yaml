@@ -1,0 +1,91 @@
+---
+# Beszel agent on every node. SSH-based pull from the hub: hub holds the
+# public key, agents accept connections only from that key. Hub address is
+# configured via the `HUB_URL` env; the agent dials home.
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: beszel-agent
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: beszel
+    app.kubernetes.io/component: agent
+    app.kubernetes.io/managed-by: flux
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: beszel
+      app.kubernetes.io/component: agent
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: beszel
+        app.kubernetes.io/component: agent
+    spec:
+      hostNetwork: true
+      hostPID: true
+      tolerations:
+        - operator: Exists
+          effect: NoSchedule
+        - operator: Exists
+          effect: NoExecute
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: false
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: beszel-agent
+          # renovate: datasource=docker depName=henrygd/beszel-agent
+          image: henrygd/beszel-agent:0.10.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: agent
+              containerPort: 45876
+              protocol: TCP
+              hostPort: 45876
+          env:
+            - name: PORT
+              value: "45876"
+            - name: KEY
+              valueFrom:
+                secretKeyRef:
+                  name: beszel-agent-key
+                  key: hub-public-key
+            - name: FILESYSTEM
+              value: /
+            - name: EXTRA_FILESYSTEMS
+              value: "nvme0n1,sda"  # Track NVMe + HDD on airbase
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+          securityContext:
+            privileged: false
+            capabilities:
+              add:
+                - SYS_PTRACE  # process introspection
+                - SYS_ADMIN   # disk + network counters
+          volumeMounts:
+            - name: proc
+              mountPath: /host/proc
+              readOnly: true
+            - name: sys
+              mountPath: /host/sys
+              readOnly: true
+            - name: rootfs
+              mountPath: /rootfs
+              readOnly: true
+              mountPropagation: HostToContainer
+      volumes:
+        - name: proc
+          hostPath:
+            path: /proc
+        - name: sys
+          hostPath:
+            path: /sys
+        - name: rootfs
+          hostPath:
+            path: /

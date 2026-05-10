@@ -1,0 +1,101 @@
+---
+name: tofu-apply
+
+# Applies the OpenTofu plan to PROD when something terraform-shaped lands on
+# main. Concurrency-locked: only one apply at a time across all triggers.
+# A workflow_dispatch button is also provided for manual re-runs after a
+# transient cloud failure.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".gitea/workflows/tofu-apply.yml"
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Optional -target=... value (only fill in for surgical applies)"
+        required: false
+        default: ""
+
+# One apply at a time. Cancelling in-flight is not safe — the in-flight job
+# may be mid-mutation. We queue instead.
+concurrency:
+  group: terraform-prod
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+    working-directory: terraform/live/prod
+
+permissions:
+  contents: read
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+
+jobs:
+
+  apply:
+    name: tofu apply (auto-approve)
+    runs-on: self-hosted
+    environment: production    # gates on the 'production' env if reviewers attached
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          # renovate: datasource=github-releases depName=opentofu/opentofu
+          tofu_version: "1.10.0"
+          tofu_wrapper: false
+
+      - name: tofu init
+        run: tofu init -no-color
+
+      - name: tofu validate
+        run: tofu validate -no-color
+
+      - name: tofu plan -out=tfplan.bin
+        run: |
+          set -o pipefail
+          if [[ -n "${TARGET:-}" ]]; then
+            tofu plan -no-color -lock-timeout=10m -out=tfplan.bin -target="${TARGET}"
+          else
+            tofu plan -no-color -lock-timeout=10m -out=tfplan.bin
+          fi
+        env:
+          TARGET: ${{ inputs.target }}
+
+      - name: tofu apply tfplan.bin
+        run: tofu apply -no-color -auto-approve -lock-timeout=10m tfplan.bin
+
+      - name: Notify success
+        if: success()
+        env:
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+        run: |
+          curl -sSf \
+            -H "Authorization: Bearer ${NTFY_TOKEN}" \
+            -H "Title: tofu apply OK" \
+            -H "Tags: white_check_mark,terraform" \
+            -d "Commit ${{ github.sha }} applied to PROD." \
+            https://ntfy.psimaker.org/homelab-deploys || true
+
+      - name: Notify failure
+        if: failure()
+        env:
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+        run: |
+          curl -sSf \
+            -H "Authorization: Bearer ${NTFY_TOKEN}" \
+            -H "Title: tofu apply FAILED" \
+            -H "Priority: urgent" \
+            -H "Tags: rotating_light,terraform" \
+            -d "Commit ${{ github.sha }} failed. See ${{ github.server_url }}/${{ github.repository }}/actions" \
+            https://ntfy.psimaker.org/homelab-critical || true

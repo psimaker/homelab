@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  role_name: k3s_server
+  author: psimaker
+  description: Install k3s as a single-node control-plane. CNI is left to Cilium installed via Flux.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+dependencies:
+  - role: baseline
+  - role: tailscale_node

@@ -1,0 +1,23 @@
+# Managed by Ansible — roles/cloudflared_host. Do not edit by hand.
+[Unit]
+Description=Cloudflare Tunnel daemon (host-level fallback)
+Documentation=https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User={{ cloudflared_service_user }}
+Group={{ cloudflared_service_user }}
+EnvironmentFile={{ cloudflared_config_dir }}/tunnel.env
+ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel run --token ${TUNNEL_TOKEN}
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

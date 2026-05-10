@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  role_name: k3s_agent
+  author: psimaker
+  description: Install k3s as an agent and join it to the edge server over Tailscale.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+dependencies:
+  - role: baseline
+  - role: tailscale_node

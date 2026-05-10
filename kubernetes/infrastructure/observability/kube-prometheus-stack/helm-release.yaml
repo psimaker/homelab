@@ -1,0 +1,43 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-prometheus-stack
+  namespace: observability
+spec:
+  interval: 30m
+  releaseName: kube-prometheus-stack
+  chart:
+    spec:
+      chart: kube-prometheus-stack
+      # renovate: datasource=helm depName=kube-prometheus-stack registryUrl=https://prometheus-community.github.io/helm-charts
+      version: 65.5.0
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: observability
+      interval: 12h
+  install:
+    remediation:
+      retries: 3
+    crds: CreateReplace
+  upgrade:
+    cleanupOnFail: true
+    crds: CreateReplace
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  valuesFrom:
+    - kind: ConfigMap
+      name: kube-prometheus-stack-helm-values
+      valuesKey: values.yaml
+    - kind: Secret
+      name: alertmanager-config
+      valuesKey: alertmanager.yaml
+      targetPath: alertmanager.config
+      optional: false
+    - kind: Secret
+      name: grafana-oidc
+      valuesKey: client_secret
+      targetPath: grafana.grafana\.ini.auth\.generic_oauth.client_secret
+      optional: false

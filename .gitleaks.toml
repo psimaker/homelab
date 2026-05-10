@@ -1,7 +1,46 @@
-title = "Homelab gitleaks config"
+# gitleaks configuration for homelab.
+#
+# Strategy:
+#   - extend the upstream default ruleset (covers all common API key shapes)
+#   - whitelist the things that LOOK like secrets but are not:
+#       * SOPS-encrypted files (entirely encrypted; the "secret" is ciphertext)
+#       * The placeholder age recipients in .sops.yaml until bootstrap runs
+#       * Operator pubkeys in inventory/group_vars/all.yml (pubkeys aren't
+#         secrets but match the SSH-key regex)
+#       * Documentation snippets that show example tokens (with [EXAMPLE] tag)
+#
+# Tested with gitleaks 8.21.x.
+
+[extend]
+useDefault = true
 
 [allowlist]
-  paths = [
-    ".env.example",
-    ".gitleaks.toml",
-  ]
+description = "Global allowlist for the homelab repo"
+
+paths = [
+  # SOPS payloads — the encrypted blobs trip many heuristics.
+  '''.*\.sops\.(ya?ml|json|env|toml|ini)$''',
+
+  # Encrypted Ansible vault files (legacy; we use SOPS now, but allow if any).
+  '''.*\.vault\.ya?ml$''',
+
+  # Generated/build artefacts inside .terraform/ contain provider binaries +
+  # provider configs that look like creds.
+  '''.*\.terraform/.*''',
+
+  # Charts/helm dependencies pulled in for offline review (pinned via Renovate).
+  '''.*/charts/.*''',
+]
+
+regexes = [
+  # The age key placeholders in .sops.yaml shipped with the repo.
+  '''age1qzg9z6yq0bootstrapwith[^\s]*''',
+  '''age1clusterkeylivesinflux-system[^\s]*''',
+]
+
+# Operator SSH public keys are listed in inventory and are not secrets.
+# Match the leading marker plus any base64 blob inside a quoted yaml string.
+stopwords = [
+  "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5",
+  "ssh-rsa AAAAB3NzaC1yc2E",
+]

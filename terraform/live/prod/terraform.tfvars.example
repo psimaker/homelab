@@ -1,0 +1,32 @@
+# Template for terraform.tfvars. Real values live in terraform.tfvars.sops.json
+# (encrypted) and are decrypted on demand:
+#
+#   sops -d terraform.tfvars.sops.json > terraform.tfvars
+#   tofu plan -var-file=terraform.tfvars
+#   shred -u terraform.tfvars
+#
+# Do not commit a populated copy of this file.
+
+# --- Hetzner Cloud ---
+# hcloud_token = "..."
+
+# --- Cloudflare ---
+# cloudflare_api_token  = "..."
+# cloudflare_account_id = "..."
+
+# --- Backblaze B2 (master key — used only to provision bucket-scoped sub-keys) ---
+# b2_application_key_id = "..."
+# b2_application_key    = "..."
+
+# --- Operator access ---
+# ssh_public_key  = "ssh-ed25519 AAAA... umo@laptop"
+# admin_allowlist = ["198.51.100.42/32", "203.0.113.0/24"]
+# admin_emails    = ["umut.erdem@protonmail.com"]
+
+# --- Tunnel origin (override only if the cluster service moves) ---
+# tunnel_origin_service = "http://cloudflared.cloudflared.svc.cluster.local:80"
+
+# --- Pocket-ID OIDC (Cloudflare Access IdP) ---
+# pocket_id_metadata_url  = "https://id.psimaker.org/.well-known/openid-configuration"
+# pocket_id_client_id     = "..."
+# pocket_id_client_secret = "..."

@@ -1,0 +1,67 @@
+---
+- name: Ensure node_exporter system user exists
+  ansible.builtin.user:
+    name: "{{ baseline_node_exporter_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: /var/lib/node_exporter
+    create_home: false
+    state: present
+
+- name: Initialise node_exporter status facts
+  ansible.builtin.set_fact:
+    _node_exporter_installed: { stdout: "" }
+
+- name: Check installed node_exporter version
+  ansible.builtin.command: /usr/local/bin/node_exporter --version
+  register: _node_exporter_installed
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Set node_exporter download facts
+  ansible.builtin.set_fact:
+    _node_exporter_archive: "node_exporter-{{ baseline_node_exporter_version }}.linux-amd64.tar.gz"
+    _node_exporter_url: >-
+      https://github.com/prometheus/node_exporter/releases/download/v{{ baseline_node_exporter_version
+      }}/node_exporter-{{ baseline_node_exporter_version }}.linux-amd64.tar.gz
+    _node_exporter_needs_update: >-
+      {{ baseline_node_exporter_version not in (_node_exporter_installed.stdout | string) }}
+
+- name: Download node_exporter release
+  ansible.builtin.get_url:
+    url: "{{ _node_exporter_url }}"
+    dest: "/tmp/{{ _node_exporter_archive }}"
+    mode: "0644"
+  when: _node_exporter_needs_update | bool
+
+- name: Unpack node_exporter binary
+  ansible.builtin.unarchive:
+    src: "/tmp/{{ _node_exporter_archive }}"
+    dest: /usr/local/bin/
+    remote_src: true
+    extra_opts:
+      - "--strip-components=1"
+      - "--wildcards"
+      - "*/node_exporter"
+    owner: root
+    group: root
+    mode: "0755"
+  when: _node_exporter_needs_update | bool
+  notify: Restart node_exporter
+
+- name: Render node_exporter systemd unit
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart node_exporter
+
+- name: Enable and start node_exporter
+  ansible.builtin.systemd:
+    name: node_exporter
+    enabled: true
+    state: started
+    daemon_reload: true

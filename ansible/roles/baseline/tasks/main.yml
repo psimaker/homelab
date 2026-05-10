@@ -1,0 +1,155 @@
+---
+- name: Set hostname from inventory_hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+    use: systemd
+
+- name: Ensure /etc/hosts maps the hostname to 127.0.1.1
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1\s'
+    line: "127.0.1.1 {{ inventory_hostname }}"
+    state: present
+
+- name: Configure timezone
+  community.general.timezone:
+    name: "{{ timezone }}"
+
+- name: Ensure default locale is generated
+  community.general.locale_gen:
+    name: "{{ locale }}"
+    state: present
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install baseline packages
+  ansible.builtin.apt:
+    name: "{{ baseline_packages }}"
+    state: present
+
+- name: Install qemu-guest-agent on virtualised hosts
+  ansible.builtin.apt:
+    name: qemu-guest-agent
+    state: present
+  when:
+    - baseline_install_qemu_guest_agent | bool
+    - ansible_virtualization_role == "guest"
+
+- name: Ensure operator user exists
+  ansible.builtin.user:
+    name: "{{ operator_user }}"
+    groups: "{{ operator_groups }}"
+    append: true
+    shell: /bin/bash
+    state: present
+    create_home: true
+
+- name: Authorise operator SSH keys
+  ansible.posix.authorized_key:
+    user: "{{ operator_user }}"
+    key: "{{ item }}"
+    state: present
+    exclusive: false
+  loop: "{{ operator_ssh_keys }}"
+
+- name: Grant passwordless sudo to operator user
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/10-{{ operator_user }}"
+    content: "{{ operator_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    validate: "/usr/sbin/visudo -cf %s"
+
+- name: Apply sysctl tuning
+  ansible.posix.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    sysctl_file: /etc/sysctl.d/99-homelab.conf
+    reload: true
+  loop: "{{ baseline_sysctl | dict2items }}"
+
+- name: Render SSH hardening drop-in
+  ansible.builtin.template:
+    src: 99-homelab-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/99-homelab-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "/usr/sbin/sshd -t -f %s"
+  notify: Restart sshd
+
+- name: Configure unattended-upgrades
+  ansible.builtin.template:
+    src: 50unattended-upgrades.j2
+    dest: /etc/apt/apt.conf.d/50unattended-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable APT auto-update timers
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      APT::Periodic::AutocleanInterval "7";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Configure fail2ban jails
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fail2ban
+
+- name: Ensure fail2ban is enabled and running
+  ansible.builtin.systemd:
+    name: fail2ban
+    enabled: true
+    state: started
+
+- name: Set UFW default policies
+  community.general.ufw:
+    direction: "{{ item.direction }}"
+    policy: "{{ item.policy }}"
+  loop:
+    - { direction: incoming, policy: "{{ baseline_ufw_default_input }}" }
+    - { direction: outgoing, policy: "{{ baseline_ufw_default_output }}" }
+
+- name: Apply UFW rules
+  community.general.ufw:
+    rule: "{{ item.rule }}"
+    proto: "{{ item.proto | default('tcp') }}"
+    port: "{{ item.port }}"
+    comment: "{{ item.comment | default(omit) }}"
+  loop: "{{ baseline_ufw_rules }}"
+
+- name: Allow tailnet to reach observability ports
+  community.general.ufw:
+    rule: allow
+    src: "100.64.0.0/10"
+    proto: tcp
+    port: "{{ item.port }}"
+    comment: "{{ item.comment }}"
+  loop:
+    - { port: "9100", comment: "node_exporter (tailnet)" }
+    - { port: "9080", comment: "promtail (tailnet)" }
+    - { port: "45876", comment: "beszel-agent (tailnet)" }
+
+- name: Enable UFW
+  community.general.ufw:
+    state: enabled
+    logging: low
+
+- name: Install node_exporter
+  ansible.builtin.include_tasks: node_exporter.yml
+  when: baseline_node_exporter_install | bool

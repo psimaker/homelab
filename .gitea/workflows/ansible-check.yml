@@ -1,0 +1,91 @@
+---
+name: ansible-check
+
+# Runs `ansible-playbook --check --diff` against airbase + edge for any PR
+# touching ansible/. Operates over the tailnet (the runner has tailscale
+# state baked into the host); only `ansible-apply.yml` makes mutations.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "ansible/**"
+      - ".gitea/workflows/ansible-check.yml"
+
+defaults:
+  run:
+    shell: bash
+    working-directory: ansible
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  ANSIBLE_FORCE_COLOR: "true"
+  ANSIBLE_HOST_KEY_CHECKING: "false"
+  PY_COLORS: "1"
+  SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+
+jobs:
+
+  check:
+    name: ansible-playbook --check --diff
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible + dependencies
+        run: |
+          set -euo pipefail
+          # renovate: datasource=pypi depName=ansible-core
+          ANSIBLE_CORE_VERSION=2.18.1
+          # renovate: datasource=pypi depName=hvac
+          HVAC_VERSION=2.3.0
+          pip install --no-cache-dir \
+            "ansible-core==${ANSIBLE_CORE_VERSION}" \
+            "hvac==${HVAC_VERSION}"
+          # community.sops needs the sops binary present at runtime.
+          # renovate: datasource=github-releases depName=getsops/sops
+          SOPS_VERSION=v3.9.2
+          curl -fsSL "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64" \
+            -o /usr/local/bin/sops
+          chmod +x /usr/local/bin/sops
+
+      - name: Install collections
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}
+
+      - name: Stage SOPS age key for ansible-vault-style decryption
+        run: |
+          mkdir -p "${HOME}/.config/sops/age"
+          printf '%s\n' "${SOPS_AGE_KEY}" > "${HOME}/.config/sops/age/keys.txt"
+          chmod 600 "${HOME}/.config/sops/age/keys.txt"
+
+      - name: Connectivity probe
+        run: ansible -i inventory/hosts.yml all -m ansible.builtin.ping
+
+      - name: ansible-playbook --check --diff
+        run: |
+          ansible-playbook \
+            -i inventory/hosts.yml \
+            --check --diff \
+            playbooks/site.yml | tee check.log
+
+      - name: Upload check log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ansible-check-${{ github.event.pull_request.number }}
+          path: ansible/check.log
+          retention-days: 30

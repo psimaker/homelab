@@ -1,0 +1,246 @@
+# LOOGI SearXNG Deployment.
+#
+# This is the migration target for the Compose service in /data/loogi on
+# airbase. Compatibility-relevant invariants we preserve:
+#
+#   * Image is the LOOGI custom build from the registry — same theme, same
+#     settings.yml/limiter.toml patches, same pinned upstream digest.
+#   * cap_drop: ALL with a narrow CHOWN/SETGID/SETUID add — matches the
+#     Compose deploy 1:1.
+#   * 8080 health check on /healthz (the upstream image's standard endpoint).
+#   * Trust chain for the limiter: the limiter.toml ConfigMap whitelists the
+#     Cloudflare ranges so X-Forwarded-For from Traefik (forwarded by
+#     cloudflared) is trusted; nothing else is.
+#
+# Replicas + topology:
+#   - 2 replicas baseline, HPA can scale to 6.
+#   - topologySpreadConstraints across hostnames so we don't put both base
+#     replicas on the same node. With only 2 Tier-1 nodes that means one on
+#     edge, one on airbase. ScheduleAnyway so the HPA can still place a 3rd
+#     replica when only one node is schedulable.
+#
+# Hardening:
+#   - readOnlyRootFilesystem: true. SearXNG writes to /etc/searxng (config
+#     reload), /var/cache/searxng (favicons), and /tmp. We mount tmpfs/
+#     emptyDir for each.
+#   - runAsUser: 977 — the upstream `searxng` user. Setting both runAsUser
+#     and runAsNonRoot makes the kubelet refuse to start the container if
+#     the image's USER ever changes to root.
+#   - allowPrivilegeEscalation: false. seccompProfile: RuntimeDefault.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loogi
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    app.kubernetes.io/component: searxng
+    tier: tier-1
+  annotations:
+    # Lets `kubectl logs/exec/cp` default to the SearXNG container without
+    # `-c searxng`. Helpful with future sidecars (e.g. blackbox-exporter).
+    kubectl.kubernetes.io/default-container: searxng
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loogi
+      app.kubernetes.io/component: searxng
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: loogi
+        app.kubernetes.io/part-of: loogi
+        app.kubernetes.io/component: searxng
+        tier: tier-1
+      annotations:
+        # Force a pod restart on ConfigMap content changes (kustomize hash
+        # would be cleaner, but Flux + kustomize with named ConfigMaps fights
+        # it). These two checksums are placeholders — pre-commit recomputes
+        # them via scripts/configmap-checksums.sh; if the script doesn't
+        # commit, CI fails. Until that's wired, manual `kubectl rollout
+        # restart` is the fallback.
+        loogi.ch/settings-checksum: "sha256:placeholder-recomputed-by-pre-commit"
+        loogi.ch/limiter-checksum: "sha256:placeholder-recomputed-by-pre-commit"
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+
+      # Spread across nodes when possible. With 2 Tier-1 nodes and 2 base
+      # replicas, this lands one per node. `ScheduleAnyway` means the
+      # scheduler tries hard but doesn't block placement when only one
+      # node is schedulable (e.g. during a drain).
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: loogi
+              app.kubernetes.io/component: searxng
+
+      securityContext:
+        runAsUser: 977
+        runAsGroup: 977
+        runAsNonRoot: true
+        fsGroup: 977
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        - name: searxng
+          # renovate: datasource=docker depName=registry.psimaker.org/umut.erdem/loogi
+          image: registry.psimaker.org/umut.erdem/loogi:1.0.0
+          imagePullPolicy: IfNotPresent
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          envFrom:
+            - secretRef:
+                name: loogi-secret
+          env:
+            - name: SEARXNG_BASE_URL
+              value: "https://loogi.ch/"
+            - name: INSTANCE_NAME
+              value: "LOOGI"
+            # Tell SearXNG where to find its config — the upstream entrypoint
+            # already defaults to /etc/searxng/, this is belt-and-braces.
+            - name: SEARXNG_SETTINGS_PATH
+              value: /etc/searxng/settings.yml
+
+          # The upstream image has /healthz on the same port as the app; we
+          # use the http port directly rather than a sidecar.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 24    # 24 * 5s = 2 min ceiling for slow starts
+            timeoutSeconds: 5
+
+          # Resource budget: SearXNG is mostly waiting on upstream engines.
+          # 100m CPU baseline is plenty; bursts to 500m cover the gevent
+          # request fan-out under load. 256Mi steady is comfortable.
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          securityContext:
+            runAsUser: 977
+            runAsGroup: 977
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              # Mirrors the Compose cap policy: drop everything, only re-add
+              # the three caps the upstream init script actually needs at
+              # startup (chown of cache dir, drop of group/user).
+              drop:
+                - ALL
+              add:
+                - CHOWN
+                - SETGID
+                - SETUID
+            seccompProfile:
+              type: RuntimeDefault
+
+          volumeMounts:
+            # /etc/searxng — needs to be writable by the entrypoint (it
+            # rewrites secret_key from env at startup). We mount the
+            # ConfigMap files via subPath into an emptyDir-backed dir so
+            # they coexist with the entrypoint's mutable copies.
+            - name: settings
+              mountPath: /etc/searxng/settings.yml
+              subPath: settings.yml
+              readOnly: true
+            - name: limiter
+              mountPath: /etc/searxng/limiter.toml
+              subPath: limiter.toml
+              readOnly: true
+            - name: etc-searxng-rw
+              mountPath: /etc/searxng
+            - name: cache
+              mountPath: /var/cache/searxng
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: settings
+          configMap:
+            name: loogi-settings
+            defaultMode: 0444
+            items:
+              - key: settings.yml
+                path: settings.yml
+        - name: limiter
+          configMap:
+            name: loogi-limiter
+            defaultMode: 0444
+            items:
+              - key: limiter.toml
+                path: limiter.toml
+        # /etc/searxng on tmpfs so the entrypoint can rewrite the secret
+        # key without flipping the (read-only) ConfigMap mount. SubPath
+        # mounts of the two config files above land inside this dir.
+        - name: etc-searxng-rw
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        - name: cache
+          emptyDir:
+            sizeLimit: 256Mi
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+
+      # Soft anti-affinity for the rare case the topology spread constraint
+      # can't be satisfied (for example during a node drain followed by a
+      # surge). Keeps replicas on separate nodes when possible without
+      # blocking scheduling outright.
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: loogi
+                    app.kubernetes.io/component: searxng
+                topologyKey: kubernetes.io/hostname
+
+      terminationGracePeriodSeconds: 30

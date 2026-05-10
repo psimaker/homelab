@@ -1,0 +1,56 @@
+---
+# Cloudflared tunnel configuration.
+#
+# Strategy: one tunnel, ingress map terminates per-hostname and forwards to
+# Traefik over HTTPS using the tunnel-internal cluster service. Traefik then
+# applies the IngressRoute matching that host.
+#
+# We deliberately do NOT terminate per-hostname here — the rule is "every
+# external host goes to Traefik, Traefik decides what happens next". A single
+# place to add a new public hostname (Traefik IngressRoute), one place to
+# trace TLS issues (cert-manager → Traefik), and the tunnel config is generic.
+#
+# `originRequest.noTLSVerify: true` because Traefik's TLS cert is for the
+# external hostname, not the internal service DNS name. That's safe within the
+# cluster boundary.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: cloudflared
+  labels:
+    app.kubernetes.io/managed-by: flux
+data:
+  config.yaml: |
+    tunnel: homelab-tier1
+    metrics: 0.0.0.0:2000
+    no-autoupdate: true
+
+    ingress:
+      # LOOGI public search
+      - hostname: loogi.ch
+        service: https://traefik.traefik.svc.cluster.local:8443
+        originRequest:
+          noTLSVerify: true
+          httpHostHeader: loogi.ch
+      - hostname: "*.loogi.ch"
+        service: https://traefik.traefik.svc.cluster.local:8443
+        originRequest:
+          noTLSVerify: true
+
+      # Personal services on psimaker.org Tier-1 sub-zone
+      - hostname: id.psimaker.org
+        service: https://traefik.traefik.svc.cluster.local:8443
+        originRequest:
+          noTLSVerify: true
+          httpHostHeader: id.psimaker.org
+      - hostname: hs.psimaker.org
+        service: https://traefik.traefik.svc.cluster.local:8443
+        originRequest:
+          noTLSVerify: true
+          httpHostHeader: hs.psimaker.org
+
+      # Catch-all — Traefik returns 404 on unknown hosts.
+      - service: https://traefik.traefik.svc.cluster.local:8443
+        originRequest:
+          noTLSVerify: true

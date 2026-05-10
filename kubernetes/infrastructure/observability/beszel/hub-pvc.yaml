@@ -1,0 +1,17 @@
+---
+# Beszel uses an embedded SQLite store. 5Gi covers months of node metrics.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: beszel-data
+  namespace: observability
+  labels:
+    app.kubernetes.io/name: beszel
+    app.kubernetes.io/component: hub
+spec:
+  storageClassName: longhorn
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

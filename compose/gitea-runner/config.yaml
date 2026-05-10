@@ -1,0 +1,33 @@
+log:
+  level: info
+
+runner:
+  file: /data/.runner
+  capacity: 2
+  timeout: 3h
+  insecure: false
+  fetch_timeout: 5s
+  fetch_interval: 2s
+  envs:
+    RUNNER_TOOL_CACHE: /runner-toolcache
+  labels:
+    - "ubuntu-latest:docker://catthehacker/ubuntu:act-latest"
+    - "ubuntu-22.04:docker://catthehacker/ubuntu:act-22.04"
+    - "ubuntu-20.04:docker://catthehacker/ubuntu:act-20.04"
+
+cache:
+  enabled: true
+  dir: "/data/cache"
+
+container:
+  network: gitea-net
+  privileged: false
+  options: "-v gitea-runner-toolcache:/runner-toolcache"
+  workdir_parent: ""
+  valid_volumes:
+    - gitea-runner-toolcache
+  docker_host: "-"
+  force_pull: false
+
+host:
+  workdir_parent: ""

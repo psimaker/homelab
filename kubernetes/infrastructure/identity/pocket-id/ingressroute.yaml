@@ -1,0 +1,29 @@
+---
+# Public IngressRoute for Pocket-ID — id.psimaker.org. This is the only
+# identity-layer service that is reachable from the public internet, by
+# design (OIDC needs a public discovery URL).
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: pocket-id
+  namespace: identity
+  annotations:
+    homelab.psimaker.org/exposure: public
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`id.psimaker.org`)
+      kind: Rule
+      services:
+        - name: pocket-id
+          port: 80
+      middlewares:
+        - name: rate-limit
+          namespace: traefik
+        - name: secure-headers
+          namespace: traefik
+        - name: compress
+          namespace: traefik
+  tls:
+    secretName: wildcard-psimaker-org-tls

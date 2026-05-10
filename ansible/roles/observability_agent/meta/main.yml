@@ -1,0 +1,15 @@
+---
+galaxy_info:
+  role_name: observability_agent
+  author: psimaker
+  description: Promtail and beszel-agent on every node, talking to in-cluster Loki/Beszel via Tailscale.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+dependencies:
+  - role: baseline
+  - role: tailscale_node

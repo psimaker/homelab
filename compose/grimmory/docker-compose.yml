@@ -1,0 +1,67 @@
+services:
+  mariadb:
+    # renovate: datasource=docker
+    image: lscr.io/linuxserver/mariadb:11.4.8
+    container_name: grimmory_mariadb
+    restart: unless-stopped
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Berlin
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-grimmory}
+      - MYSQL_USER=${MYSQL_USER:-grimmory}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - ./mariadb:/config
+    networks:
+      - grimmory_internal
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  grimmory:
+    # renovate: datasource=docker
+    image: grimmory/grimmory:latest
+    container_name: grimmory
+    restart: unless-stopped
+    environment:
+      - USER_ID=1000
+      - GROUP_ID=1000
+      - TZ=Europe/Berlin
+      - DATABASE_URL=jdbc:mariadb://mariadb:3306/${MYSQL_DATABASE:-grimmory}
+      - DATABASE_USERNAME=${MYSQL_USER:-grimmory}
+      - DATABASE_PASSWORD=${MYSQL_PASSWORD}
+      - SWAGGER_ENABLED=false
+      - FORCE_DISABLE_OIDC=false
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    # Port nur intern — Zugriff ueber Nginx Proxy Manager
+    # Domain: library.psimaker.org
+    # ports:
+    #   - "6060:6060"
+    volumes:
+      - ./data:/app/data
+      - ./books:/books
+      - ./bookdrop:/bookdrop
+    networks:
+      - grimmory_internal
+      - proxy-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://localhost:6060/api/v1/healthcheck || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+
+networks:
+  proxy-net:
+    external: true
+  grimmory_internal:
+    driver: bridge
+    internal: true

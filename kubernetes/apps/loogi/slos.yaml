@@ -1,0 +1,135 @@
+# LOOGI SLOs — Sloth format.
+#
+# The Sloth controller (installed in the observability tree) translates this
+# PrometheusServiceLevel into multi-window multi-burn-rate alerts and
+# recording rules following the Google SRE Workbook pattern. Two
+# objectives:
+#
+#   * availability  → 99.5% over 28d (Sloth's default window).
+#                     Burn-rate alerts: 14.4× (1h fast page), 6× (6h fast
+#                     page), 3× (24h slow ticket), 1× (3d slow ticket).
+#   * latency-p95   → ≥ 95% of requests under 800ms over 28d.
+#                     Same burn-rate ladder.
+#
+# Runbooks:
+#   docs/runbooks/loogi-availability.md
+#   docs/runbooks/loogi-latency.md
+# Linked from each alert via runbook_url annotations.
+---
+apiVersion: sloth.slok.dev/v1
+kind: PrometheusServiceLevel
+metadata:
+  name: loogi
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+    # Selected by the kube-prometheus-stack PrometheusRule selector that
+    # Sloth uses to expose its generated rules.
+    release: kube-prometheus-stack
+    prometheus: kube-prometheus-stack
+spec:
+  service: loogi
+  labels:
+    tier: tier-1
+    app: loogi
+
+  slos:
+    # -------------------------------------------------------------------
+    # Availability — 99.5% over 28d. SLI is the ratio of non-5xx Traefik
+    # responses for the loogi service. 4xx is excluded by design: a 404
+    # for `/missing-page` or a 429 from the rate limiter is a correct
+    # response, not a service failure.
+    # -------------------------------------------------------------------
+    - name: availability
+      objective: 99.5
+      description: >-
+        99.5% of requests to loogi.ch must succeed (non-5xx) over a rolling
+        28-day window.
+      sli:
+        events:
+          error_query: |
+            sum(rate(traefik_service_requests_total{
+              service="loogi-loogi-80@kubernetescrd",
+              code=~"5.."
+            }[{{.window}}]))
+          total_query: |
+            sum(rate(traefik_service_requests_total{
+              service="loogi-loogi-80@kubernetescrd"
+            }[{{.window}}]))
+      alerting:
+        name: LoogiAvailability
+        labels:
+          tier: tier-1
+          app: loogi
+          slo: availability
+        annotations:
+          summary: "LOOGI availability burn rate elevated"
+          description: >-
+            LOOGI's 5xx rate is burning through the 28-day error budget faster
+            than allowed. Likely causes: upstream engine breakage, Valkey
+            cache outage, pod restart loop. See runbook.
+          runbook_url: https://github.com/psimaker/homelab/blob/main/docs/runbooks/loogi-availability.md
+        page_alert:
+          labels:
+            severity: critical
+            routing: ntfy-critical
+        ticket_alert:
+          labels:
+            severity: warning
+            routing: ntfy-warnings
+
+    # -------------------------------------------------------------------
+    # Latency — 95% of requests must complete in < 800ms. SLI uses the
+    # histogram bucket count (good = le="0.8") over the total count.
+    # 800ms is the architecture-document target; lowering it tightens the
+    # SLO without code changes.
+    # -------------------------------------------------------------------
+    - name: latency-p95
+      objective: 95.0
+      description: >-
+        At least 95% of requests to loogi.ch must complete within 800ms over
+        a rolling 28-day window.
+      sli:
+        events:
+          # Sloth flips this for us into (total - good) / total when it
+          # generates the burn-rate alerts. Here we provide the events form
+          # directly.
+          error_query: |
+            (
+              sum(rate(traefik_service_request_duration_seconds_count{
+                service="loogi-loogi-80@kubernetescrd"
+              }[{{.window}}]))
+              -
+              sum(rate(traefik_service_request_duration_seconds_bucket{
+                service="loogi-loogi-80@kubernetescrd",
+                le="0.8"
+              }[{{.window}}]))
+            )
+          total_query: |
+            sum(rate(traefik_service_request_duration_seconds_count{
+              service="loogi-loogi-80@kubernetescrd"
+            }[{{.window}}]))
+      alerting:
+        name: LoogiLatencyP95
+        labels:
+          tier: tier-1
+          app: loogi
+          slo: latency-p95
+        annotations:
+          summary: "LOOGI latency p95 burn rate elevated"
+          description: >-
+            LOOGI's >800ms-request rate is burning through the 28-day budget.
+            Likely causes: upstream engine slowness, Valkey cache miss
+            storm, pod CPU saturation, network egress congestion. See
+            runbook.
+          runbook_url: https://github.com/psimaker/homelab/blob/main/docs/runbooks/loogi-latency.md
+        page_alert:
+          labels:
+            severity: critical
+            routing: ntfy-critical
+        ticket_alert:
+          labels:
+            severity: warning
+            routing: ntfy-warnings

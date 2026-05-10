@@ -1,0 +1,14 @@
+---
+galaxy_info:
+  role_name: docker_host
+  author: psimaker
+  description: Docker CE + compose plugin from upstream apt, daemon tuned for the homelab.
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Debian
+      versions:
+        - bookworm
+
+dependencies:
+  - role: baseline

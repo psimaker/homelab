@@ -1,0 +1,124 @@
+---
+name: ansible-apply
+
+# Applies ansible/playbooks/site.yml to airbase + edge when something
+# ansible-shaped lands on main. Concurrency-locked so two pushes do not race.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ansible/**"
+      - ".gitea/workflows/ansible-apply.yml"
+  workflow_dispatch:
+    inputs:
+      tags:
+        description: "Optional --tags filter (comma-separated)"
+        required: false
+        default: ""
+      limit:
+        description: "Optional --limit selector (host or group)"
+        required: false
+        default: ""
+
+concurrency:
+  group: ansible-prod
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+    working-directory: ansible
+
+permissions:
+  contents: read
+
+env:
+  ANSIBLE_FORCE_COLOR: "true"
+  ANSIBLE_HOST_KEY_CHECKING: "false"
+  PY_COLORS: "1"
+  SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+
+jobs:
+
+  apply:
+    name: ansible-playbook (apply)
+    runs-on: self-hosted
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Ansible + dependencies
+        run: |
+          set -euo pipefail
+          # renovate: datasource=pypi depName=ansible-core
+          ANSIBLE_CORE_VERSION=2.18.1
+          pip install --no-cache-dir "ansible-core==${ANSIBLE_CORE_VERSION}"
+          # renovate: datasource=github-releases depName=getsops/sops
+          SOPS_VERSION=v3.9.2
+          curl -fsSL "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64" \
+            -o /usr/local/bin/sops
+          chmod +x /usr/local/bin/sops
+
+      - name: Install collections
+        run: ansible-galaxy collection install -r requirements.yml
+
+      - name: Set up SSH agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}
+
+      - name: Stage SOPS age key
+        run: |
+          mkdir -p "${HOME}/.config/sops/age"
+          printf '%s\n' "${SOPS_AGE_KEY}" > "${HOME}/.config/sops/age/keys.txt"
+          chmod 600 "${HOME}/.config/sops/age/keys.txt"
+
+      - name: Build extra args
+        id: args
+        run: |
+          set -euo pipefail
+          extra=""
+          if [[ -n "${TAGS:-}" ]]; then extra="${extra} --tags ${TAGS}"; fi
+          if [[ -n "${LIMIT:-}" ]]; then extra="${extra} --limit ${LIMIT}"; fi
+          echo "extra=${extra}" >> "${GITHUB_OUTPUT}"
+        env:
+          TAGS: ${{ inputs.tags }}
+          LIMIT: ${{ inputs.limit }}
+
+      - name: ansible-playbook (apply)
+        run: |
+          ansible-playbook \
+            -i inventory/hosts.yml \
+            playbooks/site.yml ${{ steps.args.outputs.extra }}
+
+      - name: Notify success
+        if: success()
+        env:
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+        run: |
+          curl -sSf \
+            -H "Authorization: Bearer ${NTFY_TOKEN}" \
+            -H "Title: ansible-apply OK" \
+            -H "Tags: white_check_mark,ansible" \
+            -d "site.yml converged on commit ${{ github.sha }}." \
+            https://ntfy.psimaker.org/homelab-deploys || true
+
+      - name: Notify failure
+        if: failure()
+        env:
+          NTFY_TOKEN: ${{ secrets.NTFY_TOKEN }}
+        run: |
+          curl -sSf \
+            -H "Authorization: Bearer ${NTFY_TOKEN}" \
+            -H "Title: ansible-apply FAILED" \
+            -H "Priority: urgent" \
+            -H "Tags: rotating_light,ansible" \
+            -d "Commit ${{ github.sha }} failed. See ${{ github.server_url }}/${{ github.repository }}/actions" \
+            https://ntfy.psimaker.org/homelab-critical || true

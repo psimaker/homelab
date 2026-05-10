@@ -1,0 +1,31 @@
+# LOOGI namespace.
+#
+# Pod-Security admission: `restricted` profile. SearXNG runs as non-root with
+# all caps dropped (only CHOWN/SETGID/SETUID added — those are technically
+# disallowed under "restricted", so we set the level to "baseline" enforce
+# and "restricted" warn so we still see deviations as warnings on `kubectl
+# get events`. The narrow cap_add list mirrors the Compose deploy on airbase
+# (compose.yml, services.searxng.cap_add) — see ADR 0003 in the loogi repo.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+    # Pod-Security admission: warn at restricted, enforce at baseline.
+    # SearXNG needs CHOWN/SETGID/SETUID at startup which `restricted` forbids.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+  annotations:
+    description: >-
+      LOOGI — public SearXNG-based search engine on loogi.ch. Tier-1 SLO pilot.
+      The Valkey HelmRelease in this namespace is the limiter / favicon /
+      autocomplete cache. Source of truth for the SearXNG image is
+      git.psimaker.org/umut.erdem/loogi.

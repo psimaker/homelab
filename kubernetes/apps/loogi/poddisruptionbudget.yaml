@@ -1,0 +1,24 @@
+# PodDisruptionBudget — keep at least one SearXNG pod running during voluntary
+# disruptions (node drains, version rollouts of k3s itself, kured reboots).
+#
+# minAvailable: 1 with replicas: 2 means a drain on one node still proceeds —
+# the other replica covers traffic. With HPA scaling up to 6, this stays
+# correct: PDB enforces minimum, not exact count.
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: loogi
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    app.kubernetes.io/component: searxng
+    tier: tier-1
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loogi
+      app.kubernetes.io/component: searxng
+  unhealthyPodEvictionPolicy: AlwaysAllow

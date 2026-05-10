@@ -1,0 +1,38 @@
+---
+docker_apt_repo_url: "https://download.docker.com/linux/debian"
+docker_apt_repo_key_url: "https://download.docker.com/linux/debian/gpg"
+docker_apt_repo_keyring: /etc/apt/keyrings/docker.gpg
+
+docker_packages:
+  - docker-ce
+  - docker-ce-cli
+  - containerd.io
+  - docker-buildx-plugin
+  - docker-compose-plugin
+
+# Daemon defaults — pinned for reliability and log hygiene.
+docker_daemon_config:
+  log-driver: "json-file"
+  log-opts:
+    max-size: "10m"
+    max-file: "3"
+  live-restore: true
+  userland-proxy: false
+  no-new-privileges: true
+  default-address-pools:
+    - base: "172.30.0.0/16"
+      size: 24
+
+# Users to add to the `docker` group. Defaults to the operator only.
+docker_users:
+  - "{{ operator_user }}"
+
+# Networks to ensure exist (used by Tier-2 compose stacks).
+docker_external_networks:
+  - proxy-net
+
+# When true, the role enables Docker's loki log-driver plugin so containers
+# can ship straight to Loki via the Tailscale endpoint.
+docker_install_loki_plugin: true
+docker_loki_plugin_alias: "loki"
+docker_loki_plugin_image: "grafana/loki-docker-driver:3.3.2-amd64"

@@ -1,0 +1,124 @@
+# Promtail DaemonSet — every Tier-1 node ships its kubelet/container logs to
+# the Loki write path.
+#
+# We also expose a host-port on the agent pod (3101) so airbase's Docker
+# daemon (Tier-2) can push logs over the tailnet:
+#   `--log-driver=loki --log-opt loki-url=http://airbase.tailnet:3101/loki/api/v1/push`
+# That bypasses the in-cluster service: airbase IS the node hosting this
+# DaemonSet pod, so localhost works without any extra plumbing.
+
+daemonset:
+  enabled: true
+
+config:
+  clients:
+    - url: http://loki-write.observability.svc.cluster.local:3100/loki/api/v1/push
+      tenant_id: ""
+      backoff_config:
+        min_period: 500ms
+        max_period: 5m
+        max_retries: 10
+
+  snippets:
+    extraServerConfigs: |
+      log_level: info
+      log_format: json
+
+    extraScrapeConfigs: |
+      # Push API receiver — used by airbase Docker daemon over the tailnet
+      - job_name: docker-push-api
+        loki_push_api:
+          server:
+            http_listen_address: 0.0.0.0
+            http_listen_port: 3101
+          labels:
+            tier: tier-2
+            source: docker-airbase
+        relabel_configs:
+          - source_labels: ['__tenant_id__']
+            target_label: tenant
+          - source_labels: ['compose_service']
+            target_label: service
+          - source_labels: ['compose_project']
+            target_label: project
+
+      # Host journal on Tier-1 nodes
+      - job_name: journal
+        journal:
+          json: false
+          max_age: 12h
+          path: /var/log/journal
+          labels:
+            job: systemd-journal
+        relabel_configs:
+          - source_labels: ['__journal__systemd_unit']
+            target_label: unit
+          - source_labels: ['__journal__hostname']
+            target_label: hostname
+
+  enableTracing: false
+
+defaultVolumes:
+  - name: run
+    hostPath:
+      path: /run/promtail
+  - name: containers
+    hostPath:
+      path: /var/lib/docker/containers
+  - name: pods
+    hostPath:
+      path: /var/log/pods
+  - name: journal
+    hostPath:
+      path: /var/log/journal
+
+defaultVolumeMounts:
+  - name: run
+    mountPath: /run/promtail
+  - name: containers
+    mountPath: /var/lib/docker/containers
+    readOnly: true
+  - name: pods
+    mountPath: /var/log/pods
+    readOnly: true
+  - name: journal
+    mountPath: /var/log/journal
+    readOnly: true
+
+# Expose the push API on host port so Docker on airbase can reach it.
+extraPorts:
+  push-api:
+    name: push-api
+    containerPort: 3101
+    protocol: TCP
+    service:
+      type: ClusterIP
+      port: 3101
+    # Bind to the host interface — Docker on airbase uses the tailnet IP and
+    # this port to ship logs.
+    hostPort: 3101
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+serviceMonitor:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack
+
+# Promtail needs to read host log paths
+rbac:
+  create: true
+  pspEnabled: false
+
+# Run on every node, including the control-plane (edge runs k3s-server with
+# the control-plane taint that we tolerate by default).
+tolerations:
+  - effect: NoSchedule
+    operator: Exists
+  - effect: NoExecute
+    operator: Exists

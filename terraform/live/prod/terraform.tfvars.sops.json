@@ -1,0 +1,34 @@
+{
+	"hcloud_token": "ENC[AES256_GCM,data:PLACEHOLDER_CIPHERTEXT_REPLACE_BY_SOPS_ENCRYPT,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]",
+	"cloudflare_api_token": "ENC[AES256_GCM,data:PLACEHOLDER_CIPHERTEXT_REPLACE_BY_SOPS_ENCRYPT,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]",
+	"cloudflare_account_id": "ENC[AES256_GCM,data:PLACEHOLDER_CIPHERTEXT_REPLACE_BY_SOPS_ENCRYPT,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]",
+	"b2_application_key_id": "ENC[AES256_GCM,data:PLACEHOLDER_CIPHERTEXT_REPLACE_BY_SOPS_ENCRYPT,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]",
+	"b2_application_key": "ENC[AES256_GCM,data:PLACEHOLDER_CIPHERTEXT_REPLACE_BY_SOPS_ENCRYPT,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]",
+	"ssh_public_key": "ENC[AES256_GCM,data:PLACEHOLDER_CIPHERTEXT_REPLACE_BY_SOPS_ENCRYPT,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]",
+	"admin_allowlist": [
+		"ENC[AES256_GCM,data:PLACEHOLDER_CIPHERTEXT_REPLACE_BY_SOPS_ENCRYPT,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]"
+	],
+	"admin_emails": [
+		"ENC[AES256_GCM,data:PLACEHOLDER_CIPHERTEXT_REPLACE_BY_SOPS_ENCRYPT,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]"
+	],
+	"pocket_id_metadata_url": "ENC[AES256_GCM,data:PLACEHOLDER_CIPHERTEXT_REPLACE_BY_SOPS_ENCRYPT,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]",
+	"pocket_id_client_id": "ENC[AES256_GCM,data:PLACEHOLDER_CIPHERTEXT_REPLACE_BY_SOPS_ENCRYPT,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]",
+	"pocket_id_client_secret": "ENC[AES256_GCM,data:PLACEHOLDER_CIPHERTEXT_REPLACE_BY_SOPS_ENCRYPT,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]",
+	"sops": {
+		"kms": null,
+		"gcp_kms": null,
+		"azure_kv": null,
+		"hc_vault": null,
+		"age": [
+			{
+				"recipient": "age1qzg9z6yq0bootstrapwithagekeygenthenupdatethisanchorxxxxxxxxxx",
+				"enc": "-----BEGIN AGE ENCRYPTED FILE-----\nPLACEHOLDER_AGE_ENCRYPTED_DATA_KEY_REPLACED_BY_SOPS_ON_FIRST_ENCRYPT\n-----END AGE ENCRYPTED FILE-----\n"
+			}
+		],
+		"lastmodified": "2026-05-10T00:00:00Z",
+		"mac": "ENC[AES256_GCM,data:PLACEHOLDER_MAC_REPLACED_BY_SOPS,iv:PLACEHOLDER_IV,tag:PLACEHOLDER_TAG,type:str]",
+		"pgp": null,
+		"unencrypted_suffix": "_unencrypted",
+		"version": "3.9.0"
+	}
+}

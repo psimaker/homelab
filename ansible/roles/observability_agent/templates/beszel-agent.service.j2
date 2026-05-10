@@ -1,0 +1,25 @@
+# Managed by Ansible — roles/observability_agent. Do not edit by hand.
+[Unit]
+Description=Beszel agent (uptime + node side-channel)
+Documentation=https://beszel.dev
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
+
+[Service]
+User={{ beszel_agent_user }}
+Group={{ beszel_agent_user }}
+Environment=PORT={{ beszel_agent_listen_addr.split(':')[1] }}
+Environment=LISTEN={{ beszel_agent_listen_addr.split(':')[0] }}
+Environment=KEY={{ beszel_agent_hub_public_key }}
+Environment=HUB_URL={{ beszel_agent_hub_url }}
+ExecStart={{ beszel_agent_install_dir }}/beszel-agent
+Restart=on-failure
+RestartSec=5
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

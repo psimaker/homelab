@@ -1,0 +1,29 @@
+# Managed by Ansible — roles/baseline. Do not edit by hand.
+[Unit]
+Description=Prometheus node_exporter (homelab)
+Documentation=https://github.com/prometheus/node_exporter
+Wants=network-online.target tailscaled.service
+After=network-online.target tailscaled.service
+
+[Service]
+User={{ baseline_node_exporter_user }}
+Group={{ baseline_node_exporter_user }}
+Type=simple
+Restart=on-failure
+RestartSec=3
+ExecStart=/usr/local/bin/node_exporter \
+  --web.listen-address={{ baseline_node_exporter_listen_addr }} \
+{% for c in baseline_node_exporter_collectors_disabled %}
+  --no-collector.{{ c }} \
+{% endfor %}
+  --collector.systemd
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

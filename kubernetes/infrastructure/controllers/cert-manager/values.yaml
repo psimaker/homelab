@@ -1,0 +1,58 @@
+# cert-manager v1.16.2 values.
+#
+# CRDs are installed by the chart (`crds.enabled: true`). The HelmRelease above
+# uses `crds: CreateReplace` upgrade policy so a chart bump that adds CRD fields
+# does not get stuck.
+#
+# DNS01 self-check uses Cloudflare's authoritative resolvers because we issue
+# wildcard certs for *.psimaker.org and *.loogi.ch via Cloudflare DNS. Using the
+# default in-cluster resolver caused negative-cache lookups during cert renewal.
+
+crds:
+  enabled: true
+  keep: true
+
+replicaCount: 1
+
+prometheus:
+  enabled: true
+  servicemonitor:
+    enabled: true
+    labels:
+      release: kube-prometheus-stack
+
+dns01RecursiveNameservers: "1.1.1.1:53,1.0.0.1:53"
+dns01RecursiveNameserversOnly: true
+
+# Webhook + cainjector: 1 replica is enough for a 2-node homelab. The webhook
+# does need to be reachable across nodes, so we keep an anti-affinity hint.
+webhook:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+cainjector:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+# We don't restart pods automatically when secrets change; the Certificate
+# resources are renewed by cert-manager and Traefik picks up the new TLS
+# secret on next reconnect.
+extraArgs:
+  - --enable-certificate-owner-ref=true

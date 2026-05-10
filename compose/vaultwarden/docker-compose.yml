@@ -1,0 +1,29 @@
+services:
+  vaultwarden:
+    # renovate: datasource=docker
+    image: vaultwarden/server:latest
+    container_name: vaultwarden
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/Berlin
+      - DOMAIN=https://bitwarden.psimaker.org
+      - WEBSOCKET_ENABLED=true
+      - SIGNUPS_ALLOWED=false
+      - SHOW_PASSWORD_HINT=false
+      - SENDS_ALLOWED=true
+      - EMERGENCY_ACCESS_ALLOWED=true
+      - WEB_VAULT_ENABLED=true
+    volumes:
+      - ./data:/data
+    # ports:
+    #   - "8081:80"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - proxy-net
+
+networks:
+  proxy-net:
+    external: true
+
+# Networks entfernt, da keine internen Abhängigkeiten mehr bestehen.

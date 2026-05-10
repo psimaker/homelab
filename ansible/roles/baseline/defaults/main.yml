@@ -1,0 +1,81 @@
+---
+baseline_packages:
+  - curl
+  - wget
+  - jq
+  - git
+  - tmux
+  - htop
+  - ncdu
+  - dnsutils
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - ufw
+  - fail2ban
+  - unattended-upgrades
+  - apt-listchanges
+  - python3-apt
+
+# qemu-guest-agent is only useful on virtualised hosts (the Hetzner CX22).
+# The role inspects systemd-detect-virt and installs it conditionally.
+baseline_install_qemu_guest_agent: true
+
+baseline_sysctl:
+  vm.swappiness: 10
+  net.ipv4.ip_forward: 1
+  net.bridge.bridge-nf-call-iptables: 1
+  net.bridge.bridge-nf-call-ip6tables: 1
+  fs.inotify.max_user_watches: 524288
+  fs.inotify.max_user_instances: 512
+  net.core.somaxconn: 4096
+
+# SSH hardening — pubkey-only, no root, no password.
+baseline_ssh_settings:
+  PermitRootLogin: "no"
+  PasswordAuthentication: "no"
+  ChallengeResponseAuthentication: "no"
+  KbdInteractiveAuthentication: "no"
+  UsePAM: "yes"
+  PermitEmptyPasswords: "no"
+  X11Forwarding: "no"
+  MaxAuthTries: "3"
+  LoginGraceTime: "20"
+  ClientAliveInterval: "300"
+  ClientAliveCountMax: "2"
+
+# Unattended-upgrades — security-only, no auto-reboot.
+baseline_unattended_upgrades_origins:
+  - "origin=Debian,codename=${distro_codename},label=Debian-Security"
+  - "origin=Debian,codename=${distro_codename}-security,label=Debian-Security"
+baseline_unattended_upgrades_auto_reboot: false
+
+# fail2ban
+baseline_fail2ban_jails:
+  sshd:
+    enabled: true
+    bantime: 1h
+    findtime: 10m
+    maxretry: 5
+
+# UFW
+baseline_ufw_default_input: deny
+baseline_ufw_default_output: allow
+baseline_ufw_rules:
+  # Operator SSH from anywhere — Tailscale ACLs do the real filtering.
+  - { rule: allow, proto: tcp, port: "22", comment: "SSH" }
+  # Tailscale UDP for direct connections.
+  - { rule: allow, proto: udp, port: "41641", comment: "tailscale" }
+
+# node_exporter — systemd service bound to the Tailscale interface only, so
+# Prometheus on edge can scrape every node over the tailnet without exposing
+# anything publicly.
+baseline_node_exporter_install: true
+baseline_node_exporter_version: "{{ node_exporter_version }}"
+baseline_node_exporter_user: node-exp
+baseline_node_exporter_listen_addr: "{{ tailscale_ip }}:9100"
+baseline_node_exporter_collectors_disabled:
+  - "ipvs"
+  - "infiniband"
+  - "nfsd"
+  - "nfs"

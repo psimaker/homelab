@@ -1,0 +1,46 @@
+services:
+  syncthing:
+    # renovate: datasource=docker
+    image: syncthing/syncthing:latest
+    container_name: syncthing
+    hostname: syncthing
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - STGUIADDRESS=0.0.0.0:8384
+    volumes:
+      - /data/syncthing/config:/var/syncthing/config
+      - /data/syncthing/data:/var/syncthing/data
+    ports:
+      # WebUI (8384) goes through NPM via proxy-net
+      - "22000:22000/tcp"            # Sync protocol (TCP)
+      - "22000:22000/udp"            # Sync protocol (QUIC)
+      - "21027:21027/udp"            # Local discovery
+    networks:
+      proxy-net:
+        aliases:
+          - syncthing
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    restart: unless-stopped
+
+  vaultsync-notify:
+    # renovate: datasource=docker
+    image: ghcr.io/psimaker/vaultsync-notify:latest
+    container_name: vaultsync-notify
+    environment:
+      - SYNCTHING_API_URL=http://syncthing:8384
+      - SYNCTHING_API_KEY=${SYNCTHING_API_KEY}
+      - RELAY_URL=https://relay.vaultsync.eu
+      - DEBOUNCE_SECONDS=5
+    volumes:
+      - /data/syncthing/data:/var/syncthing/data
+    depends_on:
+      - syncthing
+    networks:
+      - proxy-net
+    restart: unless-stopped
+
+networks:
+  proxy-net:
+    external: true

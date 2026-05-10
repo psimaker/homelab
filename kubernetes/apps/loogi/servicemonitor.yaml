@@ -1,0 +1,85 @@
+# ServiceMonitor for LOOGI.
+#
+# SearXNG itself has its metrics endpoint disabled in settings.yml
+# (general.enable_metrics: false) — we don't want a public instance to leak
+# query patterns through Prometheus exposure. So this ServiceMonitor doesn't
+# scrape SearXNG directly.
+#
+# Instead, we rely on:
+#   * Traefik's metrics (one ServiceMonitor in the traefik namespace) — the
+#     authoritative SLO source for both availability and latency.
+#   * The Bitnami valkey chart's metrics ServiceMonitor (auto-created by
+#     valkey-values.yaml's metrics.serviceMonitor.enabled: true) — for cache
+#     health.
+#   * A blackbox-exporter probe (defined here as a Probe object) that hits
+#     `https://loogi.ch/healthz` from the cluster every 30s to give us an
+#     end-to-end view, separate from Traefik's own counters.
+---
+apiVersion: monitoring.coreos.com/v1
+kind: Probe
+metadata:
+  name: loogi-blackbox
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+    # Selected by the kube-prometheus-stack Probe selector
+    # (`release: kube-prometheus-stack` by default).
+    release: kube-prometheus-stack
+spec:
+  jobName: loogi-blackbox
+  interval: 30s
+  scrapeTimeout: 15s
+  module: http_2xx
+  prober:
+    # blackbox-exporter lives in the observability namespace; service name
+    # follows the kube-prometheus-stack chart convention.
+    url: kube-prometheus-stack-prometheus-blackbox-exporter.observability.svc.cluster.local:9115
+    scheme: http
+  targets:
+    staticConfig:
+      static:
+        - https://loogi.ch/healthz
+      labels:
+        app.kubernetes.io/name: loogi
+        app.kubernetes.io/part-of: loogi
+        tier: tier-1
+        target: loogi-public
+---
+# Placeholder ServiceMonitor for the day we expose SearXNG metrics on a
+# separate, NetworkPolicy-gated port. Currently selects nothing because the
+# `monitoring: enabled` label is not set on the loogi Service. Keeping the
+# manifest in-tree makes the future flip a one-line change.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: loogi-searxng
+  namespace: loogi
+  labels:
+    app.kubernetes.io/name: loogi
+    app.kubernetes.io/part-of: loogi
+    tier: tier-1
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loogi
+      app.kubernetes.io/component: searxng
+      monitoring: enabled
+  namespaceSelector:
+    matchNames:
+      - loogi
+  endpoints:
+    - port: http
+      path: /stats
+      interval: 30s
+      scrapeTimeout: 10s
+      honorLabels: true
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_node_name]
+          targetLabel: node
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+        - sourceLabels: [__meta_kubernetes_service_name]
+          targetLabel: service

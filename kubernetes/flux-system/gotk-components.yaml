@@ -1,0 +1,45 @@
+# gotk-components.yaml
+#
+# This file is normally managed by `flux bootstrap`. The bootstrap command writes
+# the full manifest set for the source-controller, kustomize-controller,
+# helm-controller and notification-controller, including their CRDs, RBAC and
+# Deployments. The exact contents differ across Flux releases, so we deliberately
+# do NOT keep a hand-rolled copy here.
+#
+# To populate this file, run:
+#
+#   ./scripts/bootstrap.sh
+#
+# which calls (essentially):
+#
+#   flux bootstrap gitea \
+#     --hostname=git.psimaker.org \
+#     --owner=umut.erdem \
+#     --repository=homelab \
+#     --branch=main \
+#     --path=kubernetes \
+#     --components-extra=image-reflector-controller,image-automation-controller \
+#     --version=v2.4.0
+#
+# The bootstrap is idempotent. After it completes, this file will be replaced by
+# the real component manifest and committed by Flux on the operator's behalf.
+#
+# Do not delete this stub: removing the file would break the kustomization in
+# `kubernetes/flux-system/kustomization.yaml` until the next bootstrap finishes.
+#
+# renovate: datasource=github-releases depName=fluxcd/flux2
+# version: v2.4.0
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flux-bootstrap-marker
+  namespace: flux-system
+  annotations:
+    homelab.psimaker.org/note: |
+      This ConfigMap is a placeholder so that `kustomize build` does not fail
+      on a freshly-cloned repository before `flux bootstrap` has been run.
+      It is harmless once the real gotk-components.yaml has been committed.
+data:
+  bootstrapped: "false"
+  bootstrap-script: scripts/bootstrap.sh

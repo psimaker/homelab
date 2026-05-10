@@ -1,0 +1,175 @@
+---
+name: lint
+
+# Runs the same hooks pre-commit runs, plus a few CI-only checks
+# (kubeconform, ansible-lint, gitleaks, sops-encryption-check).
+#
+# Source of truth lives in .pre-commit-config.yaml — this workflow exists so
+# a reviewer cannot bypass the local hooks. Pinned action versions; Renovate
+# tracks them via `helpers:pinGitHubActionDigests`.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+
+  # ----- pre-commit ---------------------------------------------------------
+  pre-commit:
+    name: pre-commit (all hooks)
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Cache pre-commit envs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+      - name: Install pre-commit
+        run: pip install --no-cache-dir pre-commit==4.0.1
+      - name: Run pre-commit
+        run: pre-commit run --all-files --show-diff-on-failure --color=always
+
+  # ----- kubeconform --------------------------------------------------------
+  kubeconform:
+    name: kubeconform (k8s manifests)
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install kubeconform
+        run: |
+          set -euo pipefail
+          # renovate: datasource=github-releases depName=yannh/kubeconform
+          KUBECONFORM_VERSION=v0.6.7
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin kubeconform
+          kubeconform -v
+      - name: Validate manifests
+        run: |
+          set -euo pipefail
+          # Find every YAML under kubernetes/ except SOPS files, helm values,
+          # kustomizations, and Flux's own bootstrapped components.
+          mapfile -t targets < <(
+            find kubernetes -type f \( -name '*.yaml' -o -name '*.yml' \) \
+              ! -name '*.sops.yaml' \
+              ! -name '*.sops.yml' \
+              ! -name 'values.yaml' \
+              ! -name 'kustomization.yaml' \
+              ! -path 'kubernetes/flux-system/*'
+          )
+          if (( ${#targets[@]} == 0 )); then
+            echo "::warning::No kubeconform targets found"
+            exit 0
+          fi
+          kubeconform \
+            -strict \
+            -ignore-missing-schemas \
+            -kubernetes-version 1.31.0 \
+            -summary \
+            "${targets[@]}"
+
+  # ----- tflint -------------------------------------------------------------
+  tflint:
+    name: tflint (OpenTofu)
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup tflint
+        uses: terraform-linters/setup-tflint@v4
+        with:
+          # renovate: datasource=github-releases depName=terraform-linters/tflint
+          tflint_version: v0.55.0
+      - name: tflint init
+        working-directory: terraform
+        run: tflint --init
+      - name: tflint
+        working-directory: terraform
+        run: |
+          tflint --recursive \
+                 --config="${PWD}/.tflint.hcl" \
+                 --color || tflint --recursive --color
+
+  # ----- ansible-lint -------------------------------------------------------
+  ansible-lint:
+    name: ansible-lint
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ansible-lint
+        run: |
+          # renovate: datasource=pypi depName=ansible-lint
+          ANSIBLE_LINT_VERSION=25.1.0
+          # renovate: datasource=pypi depName=ansible-core
+          ANSIBLE_CORE_VERSION=2.18.1
+          pip install --no-cache-dir \
+            "ansible-lint==${ANSIBLE_LINT_VERSION}" \
+            "ansible-core==${ANSIBLE_CORE_VERSION}"
+      - name: Install collections
+        run: ansible-galaxy collection install -r ansible/requirements.yml
+      - name: ansible-lint
+        run: ansible-lint ansible/playbooks ansible/roles --profile production
+
+  # ----- gitleaks -----------------------------------------------------------
+  gitleaks:
+    name: gitleaks (secret-scan)
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # gitleaks scans full history on PRs
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_SUMMARY: "true"
+
+  # ----- sops-encryption-check ---------------------------------------------
+  sops-encryption-check:
+    name: sops-encryption-check
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify every *.sops.* is encrypted
+        run: |
+          set -euo pipefail
+          # Any file matching the .sops.yaml creation_rules must contain a
+          # 'sops:' marker. Plaintext slipping past pre-commit lands here.
+          fail=0
+          while IFS= read -r f; do
+            if ! grep -q -E '^(sops:|"sops"[[:space:]]*:)' "${f}"; then
+              echo "::error file=${f}::file matches *.sops.* pattern but is NOT encrypted"
+              fail=1
+            fi
+          done < <(
+            git ls-files \
+              | grep -E '\.sops\.(ya?ml|json|env|toml|ini)$' || true
+          )
+          if (( fail == 1 )); then
+            echo "::error::sops-encryption-check failed — see annotations above"
+            exit 1
+          fi
+          echo "All *.sops.* files are properly encrypted."

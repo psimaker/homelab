@@ -1,0 +1,76 @@
+---
+# Rare maintenance playbook: rotate the restic repository password without
+# discarding history.
+#
+# What it does:
+#   1. Reads the current and new passwords from the SOPS-encrypted inventory.
+#      Set `restic_password` (current) and `restic_password_new` (next) before
+#      running this playbook (re-encrypt with `sops -e -i ...`).
+#   2. Calls `restic key add` with the new password against the primary repo.
+#   3. Calls `restic key add` against the secondary repo.
+#   4. Lists keys and removes the old one only after the new one is confirmed.
+#
+# Run it with:
+#   ansible-playbook playbooks/rotate-restic-keys.yml --check
+# first, always.
+
+- name: Rotate restic repository encryption keys
+  hosts: home_dataplane
+  become: true
+  gather_facts: false
+  vars:
+    restic_repos:
+      - "{{ restic_repository_primary }}"
+      - "{{ restic_repository_secondary }}"
+  tasks:
+
+    - name: Fail when new password is not set
+      ansible.builtin.assert:
+        that:
+          - restic_password is defined
+          - restic_password_new is defined
+          - restic_password != restic_password_new
+        fail_msg: >
+          Set both restic_password (current) and restic_password_new (next)
+          in the SOPS-encrypted inventory before running this playbook.
+
+    - name: Add the new key to each restic repository
+      ansible.builtin.command:
+        cmd: "restic -r {{ item }} key add"
+      environment:
+        RESTIC_PASSWORD: "{{ restic_password }}"
+        RESTIC_NEW_PASSWORD: "{{ restic_password_new }}"
+        B2_ACCOUNT_ID: "{{ restic_b2_account_id | default(omit) }}"
+        B2_ACCOUNT_KEY: "{{ restic_b2_account_key | default(omit) }}"
+      register: _restic_key_add
+      changed_when: "'saved new key' in _restic_key_add.stdout"
+      loop: "{{ restic_repos }}"
+
+    - name: List remaining keys per repo (audit log)
+      ansible.builtin.command:
+        cmd: "restic -r {{ item }} key list"
+      environment:
+        RESTIC_PASSWORD: "{{ restic_password_new }}"
+        B2_ACCOUNT_ID: "{{ restic_b2_account_id | default(omit) }}"
+        B2_ACCOUNT_KEY: "{{ restic_b2_account_key | default(omit) }}"
+      register: _restic_key_list
+      changed_when: false
+      loop: "{{ restic_repos }}"
+
+    - name: Surface the key audit to the operator
+      ansible.builtin.debug:
+        msg: |
+          Repo: {{ item.item }}
+          {{ item.stdout }}
+      loop: "{{ _restic_key_list.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Remind the operator to remove the old key manually
+      ansible.builtin.debug:
+        msg: |
+          New key added on every repo. Verify a backup with the new password,
+          then run:
+            restic -r <repo> key remove <old-key-id>
+          for each repo. The old key is intentionally NOT removed by this
+          playbook — that is a manual step gated on a successful test backup.

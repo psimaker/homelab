@@ -1,0 +1,10 @@
+# Managed by Ansible — roles/restic_host_job. Do not edit by hand.
+# Paths excluded from every restic snapshot on this host.
+{% for path in restic_exclude_paths %}
+{{ path }}
+{% endfor %}
+
+# Glob-pattern excludes (apply within every backed-up tree).
+{% for pat in restic_exclude_patterns %}
+{{ pat }}
+{% endfor %}

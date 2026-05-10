@@ -1,0 +1,109 @@
+---
+# Detects HelmReleases that have fallen more than 6 months behind the latest
+# chart version published in their HelmRepository.
+#
+# How it works:
+#
+# Flux's helm-controller exports `gotk_resource_info` and Flux's source-
+# controller exports `gotk_helm_repository_info` and `gotk_helm_chart_info`.
+# Combined, we can compute the gap between the version applied by a
+# HelmRelease and the latest version in the index.
+#
+# Strategy:
+# - Recording rule `homelab:helmrelease_age_seconds` captures, for each
+#   HelmRelease, the time elapsed since `chart.spec.version` was first seen
+#   in the cluster (≈ when it was last bumped).
+# - Alert `HelmReleaseStale` fires when that age exceeds 6 months
+#   (15552000 s).
+#
+# In practice "stale" can mean two things:
+#   1. We're behind upstream (Renovate hasn't filed/merged a PR yet) — fix
+#      by triaging the open PR or filing one manually.
+#   2. The chart vendor abandoned the project — fix by reading the chart's
+#      release notes, then either pinning to LTS or migrating away.
+#
+# The rule is intentionally one alert; the runbook handles the disambiguation.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: helmrelease-version-staleness
+  namespace: observability
+  labels:
+    app.kubernetes.io/managed-by: flux
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: homelab.helmrelease-staleness
+      interval: 15m
+      rules:
+        # Recording rule: time since the current chart version was first seen
+        # in the cluster, per HelmRelease. The Flux exporter resets the
+        # `gotk_resource_info` time-series on a version change, so the metric
+        # `time() - last_seen_change` is a clean "age in seconds".
+        - record: homelab:helmrelease_chart_version_age_seconds
+          expr: |
+            time()
+              - max by (namespace, name, exported_namespace, chart, version) (
+                  changes(
+                    gotk_resource_info{kind="HelmRelease"}[30d]
+                  ) * 0
+                  + last_over_time(
+                      gotk_resource_info{kind="HelmRelease"}[30d]
+                    ) * timestamp(gotk_resource_info{kind="HelmRelease"})
+                )
+
+        # Recording rule: number of versions newer than the deployed one in
+        # the corresponding HelmRepository index, per HelmRelease.
+        - record: homelab:helmrelease_versions_behind_count
+          expr: |
+            count by (namespace, name) (
+              gotk_helm_repository_info{}
+              unless on(chart, version) gotk_helm_chart_info{}
+            )
+
+        - alert: HelmReleaseStale
+          expr: |
+            homelab:helmrelease_chart_version_age_seconds > (180 * 24 * 60 * 60)
+          for: 6h
+          labels:
+            severity: warning
+            tier: tier-1
+          annotations:
+            summary: "HelmRelease {{ $labels.namespace }}/{{ $labels.name }} has not been bumped in over 6 months"
+            description: |
+              The chart `{{ $labels.chart }}` is pinned at version
+              `{{ $labels.version }}` and has not changed in {{ $value | humanizeDuration }}.
+
+              Either Renovate hasn't opened a PR, or it has and the PR is
+              waiting for human review. Investigate before it drifts further.
+            runbook_url: https://git.psimaker.org/umut.erdem/homelab/wiki/runbooks/helmrelease-stale
+
+        - alert: HelmReleaseFailed
+          expr: |
+            gotk_resource_info{kind="HelmRelease", ready="False"} == 1
+          for: 30m
+          labels:
+            severity: warning
+            tier: tier-1
+          annotations:
+            summary: "HelmRelease {{ $labels.namespace }}/{{ $labels.name }} is not Ready"
+            description: |
+              The HelmRelease has been not-Ready for more than 30 minutes.
+              `flux describe helmrelease -n {{ $labels.namespace }} {{ $labels.name }}`
+              to see the conditions.
+            runbook_url: https://git.psimaker.org/umut.erdem/homelab/wiki/runbooks/helmrelease-failed
+
+        - alert: HelmReleaseSuspended
+          expr: |
+            gotk_suspend_status{kind="HelmRelease"} == 1
+          for: 24h
+          labels:
+            severity: info
+            tier: tier-1
+          annotations:
+            summary: "HelmRelease {{ $labels.namespace }}/{{ $labels.name }} has been suspended for >24h"
+            description: |
+              A suspended HelmRelease will not reconcile. If this is intentional
+              (e.g. paused during an incident), silence the alert; otherwise
+              `flux resume helmrelease -n {{ $labels.namespace }} {{ $labels.name }}`.
+            runbook_url: https://git.psimaker.org/umut.erdem/homelab/wiki/runbooks/helmrelease-suspended

@@ -1,0 +1,46 @@
+---
+# Two wildcard certs covering all Tier-1 surfaces. Stored in `traefik` namespace
+# so IngressRoutes there can mount them by name. Sub-domains under `psimaker.org`
+# are reserved for Tier-1 (id.psimaker.org, hs.psimaker.org, …); apex and
+# Tier-2-owned hosts (bitwarden.psimaker.org etc.) are issued by Nginx Proxy
+# Manager separately, see docs/adr/0005-tls-zwei-issuer.md.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-loogi-ch
+  namespace: traefik
+spec:
+  secretName: wildcard-loogi-ch-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: "*.loogi.ch"
+  dnsNames:
+    - "loogi.ch"
+    - "*.loogi.ch"
+  duration: 2160h     # 90d
+  renewBefore: 360h   # 15d
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: wildcard-psimaker-org
+  namespace: traefik
+spec:
+  secretName: wildcard-psimaker-org-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: "*.psimaker.org"
+  dnsNames:
+    - "*.psimaker.org"
+  duration: 2160h
+  renewBefore: 360h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+    rotationPolicy: Always

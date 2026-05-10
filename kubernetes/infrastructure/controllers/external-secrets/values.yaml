@@ -1,0 +1,32 @@
+# External-Secrets Operator (ESO) values.
+#
+# We install ESO empty: no providers configured by default. The reasoning is in
+# docs/adr/0004-secrets-sops-vs-vault.md — SOPS+age is the default. ESO exists
+# so that anything which genuinely belongs in 1Password (or, in future, a
+# managed secrets backend) has a documented upgrade path.
+#
+# When you wire up the first ClusterSecretStore, see cluster-secret-store.yaml
+# next to this file (currently a commented-out 1Password stub).
+
+installCRDs: true
+
+replicaCount: 1
+
+webhook:
+  replicaCount: 1
+
+certController:
+  replicaCount: 1
+
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    release: kube-prometheus-stack
+  interval: 30s
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 256Mi

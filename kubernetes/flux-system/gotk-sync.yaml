@@ -1,0 +1,117 @@
+# gotk-sync.yaml — the GitRepository source and the parent Kustomization.
+#
+# After `flux bootstrap`, Flux owns this file. The bootstrap commits a version
+# pinned to whatever flux CLI was used. We commit a hand-curated version so the
+# repository is meaningful before bootstrap, and so reviewers can see exactly
+# what Flux will reconcile.
+#
+# The GitRepository points at the Gitea primary; the public mirror at
+# github.com/psimaker/homelab is a one-way push from CI and is never used as a
+# source by Flux.
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 1m
+  ref:
+    branch: main
+  secretRef:
+    name: flux-system
+  url: ssh://git@git.psimaker.org/umut.erdem/homelab
+  ignore: |
+    # exclude all
+    /*
+    # include kubernetes/
+    !/kubernetes
+---
+# Parent Kustomization that points at kubernetes/ and discovers the
+# infrastructure and apps subtrees through their own kustomization.yaml files.
+# Flux follows the depends-on chain: infrastructure → apps.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 10m
+  path: ./kubernetes
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
+        optional: true
+      - kind: Secret
+        name: cluster-secrets
+        optional: true
+---
+# Infrastructure layer — controllers, storage, observability, identity.
+# Reconciles every 10 minutes; controllers change rarely. SOPS decryption
+# enabled so that ClusterIssuers, tunnel tokens and OIDC secrets render.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infrastructure
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 2m
+  timeout: 5m
+  path: ./kubernetes/infrastructure
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: DaemonSet
+      name: cilium
+      namespace: kube-system
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: cert-manager
+      namespace: cert-manager
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: traefik
+      namespace: traefik
+---
+# Apps layer — workloads. Reconciles every minute; depends on infrastructure
+# being healthy. Without that gate, an HTTPS workload may try to come up
+# before cert-manager is alive and end up in CrashLoop.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: apps
+  namespace: flux-system
+spec:
+  interval: 1m
+  retryInterval: 1m
+  timeout: 5m
+  path: ./kubernetes/apps
+  prune: true
+  wait: false
+  dependsOn:
+    - name: infrastructure
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age

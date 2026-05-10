@@ -1,0 +1,12 @@
+# Managed by Ansible — roles/baseline. Do not edit by hand.
+[DEFAULT]
+backend = systemd
+banaction = ufw
+
+{% for jail, settings in baseline_fail2ban_jails.items() %}
+[{{ jail }}]
+{% for k, v in settings.items() %}
+{{ k }} = {{ v }}
+{% endfor %}
+
+{% endfor %}

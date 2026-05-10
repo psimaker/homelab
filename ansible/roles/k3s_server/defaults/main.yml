@@ -1,0 +1,23 @@
+---
+k3s_install_script_url: "https://get.k3s.io"
+k3s_install_script_path: /usr/local/bin/k3s-install.sh
+
+k3s_config_dir: /etc/rancher/k3s
+k3s_config_path: "{{ k3s_config_dir }}/config.yaml"
+
+# Server-side flags rendered into config.yaml. Defaults to host-level overrides
+# in inventory/group_vars/edge.yml.
+k3s_server_disable_components: "{{ k3s_disable_components | default(['traefik', 'servicelb', 'metrics-server', 'local-storage']) }}"
+k3s_server_advertise_address: "{{ tailscale_ip }}"
+k3s_server_node_ip: "{{ tailscale_ip }}"
+
+# Helper CLIs co-located on the control-plane node.
+k3s_install_helm: true
+k3s_install_flux: true
+helm_version: "v3.16.3"
+flux_version: "v2.4.0"
+
+# Fetch a remote-friendly kubeconfig back to the controller machine.
+k3s_fetch_kubeconfig: true
+k3s_kubeconfig_local_path: "{{ playbook_dir }}/../.local/kubeconfig"
+k3s_kubeconfig_remote_path: "{{ k3s_config_dir }}/k3s.yaml"

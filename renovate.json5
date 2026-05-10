@@ -1,0 +1,116 @@
+{
+  // Self-hosted Renovate config — runs as CronJob in k3s every night at 04:00 Europe/Zurich.
+  // See docs/adr/0003-renovate-self-hosted.md for the why.
+  $schema: "https://docs.renovatebot.com/renovate-schema.json",
+
+  extends: [
+    "config:recommended",
+    ":semanticCommitTypeAll(chore)",
+    ":disableRateLimiting",
+    "docker:enableMajor",
+    ":enablePreCommit",
+    "helpers:pinGitHubActionDigests",
+  ],
+
+  timezone: "Europe/Zurich",
+  schedule: ["before 6am on monday", "before 6am on thursday"],
+  prHourlyLimit: 0,
+  prConcurrentLimit: 5,
+  branchConcurrentLimit: 10,
+
+  labels: ["renovate"],
+  assignees: ["@umut.erdem"],
+  reviewers: ["@umut.erdem"],
+
+  // Group platform infrastructure together so a single PR moves the cluster forward
+  packageRules: [
+    {
+      description: "Auto-merge patch + minor for trusted ecosystem images",
+      matchPackagePatterns: [
+        "^ghcr.io/cloudflare/cloudflared",
+        "^ghcr.io/fluxcd/",
+        "^ghcr.io/external-secrets/",
+        "^quay.io/cilium/",
+        "^docker.io/traefik",
+        "^docker.io/grafana/",
+        "^docker.io/prom/",
+      ],
+      matchUpdateTypes: ["patch", "minor"],
+      automerge: true,
+      automergeType: "pr",
+      ignoreTests: false,
+      platformAutomerge: true,
+    },
+    {
+      description: "Group Flux CD updates",
+      matchPackageNames: [
+        "ghcr.io/fluxcd/flux-cli",
+        "ghcr.io/fluxcd/source-controller",
+        "ghcr.io/fluxcd/kustomize-controller",
+        "ghcr.io/fluxcd/helm-controller",
+        "ghcr.io/fluxcd/notification-controller",
+      ],
+      groupName: "flux",
+    },
+    {
+      description: "Group kube-prometheus-stack chart bundle",
+      matchPackageNames: ["kube-prometheus-stack"],
+      groupName: "kube-prometheus-stack",
+    },
+    {
+      description: "Slow-roll Talos / k3s major bumps — never auto-merge",
+      matchPackageNames: ["k3s-io/k3s", "siderolabs/talos"],
+      matchUpdateTypes: ["major"],
+      automerge: false,
+      labels: ["renovate", "needs-adr"],
+    },
+    {
+      description: "Pin SearXNG by digest — LOOGI builds on it; surprise upstreams break our patches",
+      matchPackageNames: ["docker.io/searxng/searxng"],
+      pinDigests: true,
+    },
+    {
+      description: "Tag Cloudflare provider as needs-review (DNS == prod)",
+      matchPackageNames: [
+        "registry.terraform.io/cloudflare/cloudflare",
+      ],
+      labels: ["renovate", "needs-review", "infra"],
+      automerge: false,
+    },
+  ],
+
+  // OpenTofu module + provider updates
+  terraform: {
+    fileMatch: ["\\.tf$", "\\.tofu$"],
+  },
+
+  // Helm releases inside Flux HelmRelease manifests
+  flux: {
+    fileMatch: ["kubernetes/.+\\.ya?ml$"],
+  },
+
+  "helm-values": {
+    fileMatch: ["kubernetes/.+/values\\.ya?ml$"],
+  },
+
+  // Custom regex managers for things Renovate doesn't natively understand
+  regexManagers: [
+    {
+      description: "Detect image tags pinned via comments",
+      fileMatch: ["\\.ya?ml$", "\\.tf$"],
+      matchStrings: [
+        "#\\s?renovate:\\s?datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)\\s+versioning=(?<versioning>\\S+)?\\s*\\n.*?[:=]\\s*\"?(?<currentValue>[^\\s\"']+)\"?",
+      ],
+    },
+  ],
+
+  // Vulnerability alerts — always open a PR, ignore schedule
+  vulnerabilityAlerts: {
+    enabled: true,
+    schedule: ["at any time"],
+    labels: ["security", "renovate"],
+  },
+
+  // OSV-based security advisories
+  osvVulnerabilityAlerts: true,
+}

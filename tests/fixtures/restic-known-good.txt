@@ -1,0 +1,22 @@
+homelab restic restore-test fixture
+====================================
+
+This file is the canonical reference content for the weekly restic
+restore-test. The matching copy on airbase lives at:
+
+    /data/restic-fixture/restic-known-good.txt
+
+…and is included in every restic backup the same way real workloads are.
+The restore-test workflow restores ONLY this path from a randomly chosen
+snapshot, then `diff`s the restored file against this committed copy.
+
+If you change either copy without changing the other, the workflow will
+flag the drift on its next run. That is the point.
+
+DO NOT remove without also updating:
+  - scripts/restic-restore-test.sh   (KNOWN_GOOD path)
+  - .gitea/workflows/restore-test.yml
+  - ansible/roles/restic_host_job/   (deploys the on-disk twin)
+
+Last edited: 2026-05-10
+Maintainer: umut.erdem

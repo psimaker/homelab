@@ -1,0 +1,103 @@
+# Cilium 1.17 values for the 2-node k3s cluster (edge + airbase).
+#
+# Why these settings:
+# - We kept k3s's bundled kube-proxy (not --disable kube-proxy). Cilium therefore
+#   runs in chaining-friendly mode: kubeProxyReplacement: false. Reason: a
+#   surprise upgrade of either k3s or Cilium has one fewer interaction surface
+#   when kube-proxy is the canonical L4 path. Pure Cilium replacement is on the
+#   shortlist but gated on a successful rolling restart drill — see
+#   docs/adr/0011-cilium-as-cni.md.
+# - WireGuard transparent encryption: defence in depth. The whole fleet already
+#   sits on Tailscale, so packets between edge and airbase are encrypted anyway,
+#   but Cilium-WG covers pod-to-pod traffic that never leaves the host kernel
+#   namespace and therefore never touches Tailscale.
+# - Hubble: relay + UI. UI is gated by a Traefik IngressRoute on the tailnet
+#   only, never published to the internet.
+# - Native routing on 10.42.0.0/16 (k3s default podCIDR). With 2 nodes there is
+#   no advantage in tunnel mode and native routing keeps trace MTUs predictable.
+# - Gateway API CRDs enabled — we don't use them yet, but having them present
+#   means a future workload can opt in without a controller restart.
+
+kubeProxyReplacement: false
+k8sServiceHost: 100.64.0.1  # edge tailnet IP — k3s API server
+k8sServicePort: 6443
+
+# Routing
+routingMode: native
+ipv4NativeRoutingCIDR: 10.42.0.0/16
+autoDirectNodeRoutes: true
+
+ipam:
+  mode: kubernetes
+
+# Encryption (defence in depth — Tailscale already wraps node-to-node traffic)
+encryption:
+  enabled: true
+  type: wireguard
+  nodeEncryption: false  # would re-encrypt host-network traffic (incl. Tailscale itself)
+
+# Hubble
+hubble:
+  enabled: true
+  metrics:
+    enabled:
+      - dns
+      - drop
+      - tcp
+      - flow
+      - port-distribution
+      - icmp
+      - http
+    serviceMonitor:
+      enabled: true
+  relay:
+    enabled: true
+    rollOutPods: true
+  ui:
+    enabled: true
+    rollOutPods: true
+    # Service is left as ClusterIP; an IngressRoute with Tinyauth middleware
+    # exposes it on the tailnet only.
+    service:
+      type: ClusterIP
+
+# Gateway API
+gatewayAPI:
+  enabled: true
+
+# Operator: 1 replica is enough for a 2-node cluster
+operator:
+  replicas: 1
+  rollOutPods: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# Cilium agent metrics
+prometheus:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    trustCRDsExist: true
+
+# k3s tweaks
+cni:
+  exclusive: false  # tolerate the bundled k3s flannel files in /etc/cni/net.d
+containerRuntime:
+  integration: containerd
+  socketPath: /var/run/k3s/containerd/containerd.sock
+
+# Resource limits — small, this is a homelab
+resources:
+  limits:
+    memory: 4Gi
+  requests:
+    cpu: 100m
+    memory: 256Mi
