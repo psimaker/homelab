@@ -183,8 +183,8 @@ include-list's *expected* total size against the *actual* repo size.
 - [x] **me** — Add Prometheus alert `RestricRepoSizeApproachingQuota` at 80 % of Storage Box quota (warning) and 92 % (critical) — 2026-02-13 — alert in `kubernetes/infrastructure/observability/restic-alerts.yaml`.
 - [x] **me** — Ansible role: compute total backup-source size from include-list at apply time, warn if estimated repo size would exceed 70 % of target quota — 2026-02-15 — implemented in `ansible/roles/restic/tasks/preflight.yml`.
 - [x] **me** — Route Hetzner Storage Box quota-warning emails to the same ntfy topic as the systemd failure — 2026-02-14 — done via the `mail-to-ntfy.service` shim on airbase.
-- [ ] **me** — Decide on always-allocating a Storage Box upgrade (BX21, 5 TB) vs. tightening retention — 2026-Q3 — [git.psimaker.org/umut.erdem/homelab#187](https://git.psimaker.org/umut.erdem/homelab/issues/187).
-- [ ] **me** — Run a planned restic-restore-test that exercises the *recovery from quota-exceed* path explicitly, not just the happy-path restore — 2026-Q2 — [#188](https://git.psimaker.org/umut.erdem/homelab/issues/188).
+- [ ] **me** — Decide on always-allocating a Storage Box upgrade (BX21, 5 TB) vs. tightening retention — 2026-Q3 — [git.example.com/umut.erdem/homelab#187](https://git.example.com/umut.erdem/homelab/issues/187).
+- [ ] **me** — Run a planned restic-restore-test that exercises the *recovery from quota-exceed* path explicitly, not just the happy-path restore — 2026-Q2 — [#188](https://git.example.com/umut.erdem/homelab/issues/188).
 - [x] **me** — Add a check in the weekly `restore-test.yml` workflow that diff's the include-list against the previous run's stats — 2026-02-20.
 
 ## Lessons

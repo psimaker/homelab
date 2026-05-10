@@ -20,7 +20,7 @@ locale: en_US.UTF-8
 # Headscale URL — see the chicken-and-egg note in roles/tailscale_node/README.md.
 # On the very first bootstrap (Headscale not yet running in-cluster), point
 # this at a temporary tailscale.com control plane or skip the role.
-headscale_url: "https://hs.psimaker.org"
+headscale_url: "https://hs.example.com"
 tailscale_tags:
   - "tag:node"
 tailscale_accept_routes: true

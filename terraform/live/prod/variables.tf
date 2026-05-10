@@ -1,3 +1,8 @@
+variable "base_domain" {
+  description = "Primary apex domain for Tier-1 admin services (Pocket-ID, Headscale, edge node). Anonymized in the public mirror; real value lives in terraform.tfvars."
+  type        = string
+}
+
 variable "hcloud_token" {
   description = "Hetzner Cloud API token with read-write scope on the project."
   type        = string

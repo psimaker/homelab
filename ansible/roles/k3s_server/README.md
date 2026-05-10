@@ -9,7 +9,7 @@ multi-master.
 - Renders `/etc/rancher/k3s/config.yaml` with cluster CIDRs, the disabled
   components (`traefik`, `servicelb`, `metrics-server`, `local-storage`),
   Cilium-friendly flags (`flannel-backend: none`, `disable-network-policy:
-  true`), and TLS SANs for `edge.tailnet`, `hs.psimaker.org`, the Tailscale
+  true`), and TLS SANs for `edge.tailnet`, `hs.example.com`, the Tailscale
   IP.
 - Downloads `https://get.k3s.io` once, runs it with `INSTALL_K3S_VERSION`
   pinned, `K3S_TOKEN` from SOPS, no extra flags (everything is in

@@ -5,7 +5,7 @@ metadata:
   name: beszel
   namespace: observability
   annotations:
-    homelab.psimaker.org/exposure: tailnet-only
+    homelab.example.com/exposure: tailnet-only
 spec:
   entryPoints:
     - websecure

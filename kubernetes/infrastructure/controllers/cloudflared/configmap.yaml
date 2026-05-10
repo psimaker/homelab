@@ -38,17 +38,17 @@ data:
         originRequest:
           noTLSVerify: true
 
-      # Personal services on psimaker.org Tier-1 sub-zone
-      - hostname: id.psimaker.org
+      # Personal services on example.com Tier-1 sub-zone
+      - hostname: id.example.com
         service: https://traefik.traefik.svc.cluster.local:8443
         originRequest:
           noTLSVerify: true
-          httpHostHeader: id.psimaker.org
-      - hostname: hs.psimaker.org
+          httpHostHeader: id.example.com
+      - hostname: hs.example.com
         service: https://traefik.traefik.svc.cluster.local:8443
         originRequest:
           noTLSVerify: true
-          httpHostHeader: hs.psimaker.org
+          httpHostHeader: hs.example.com
 
       # Catch-all — Traefik returns 404 on unknown hosts.
       - service: https://traefik.traefik.svc.cluster.local:8443

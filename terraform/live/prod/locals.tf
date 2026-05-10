@@ -7,8 +7,8 @@ locals {
   edge_private = "10.20.1.10"
 
   zones = {
-    loogi_ch     = "loogi.ch"
-    psimaker_org = "psimaker.org"
+    loogi_ch = "loogi.ch"
+    primary  = var.base_domain
   }
 
   # Hostnames the tunnel serves. Single source of truth for cloudflare.tf.
@@ -19,13 +19,13 @@ locals {
       auth = false
     }
     pocket_id = {
-      zone = "psimaker_org"
-      fqdn = "id.psimaker.org"
+      zone = "primary"
+      fqdn = "id.${var.base_domain}"
       auth = false # Pocket-ID issues its own UI session
     }
     headscale = {
-      zone = "psimaker_org"
-      fqdn = "hs.psimaker.org"
+      zone = "primary"
+      fqdn = "hs.${var.base_domain}"
       auth = false # Tailscale clients can't carry Access cookies
     }
   }

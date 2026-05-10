@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Berlin
-      - DOMAIN=https://bitwarden.psimaker.org
+      - DOMAIN=https://bitwarden.example.com
       - WEBSOCKET_ENABLED=true
       - SIGNUPS_ALLOWED=false
       - SHOW_PASSWORD_HINT=false

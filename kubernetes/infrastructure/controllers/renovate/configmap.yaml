@@ -14,8 +14,8 @@ data:
   config.js: |
     module.exports = {
       platform: 'gitea',
-      endpoint: 'https://git.psimaker.org/api/v1',
-      gitAuthor: 'Renovate Bot <renovate@psimaker.org>',
+      endpoint: 'https://git.example.com/api/v1',
+      gitAuthor: 'Renovate Bot <renovate@example.com>',
       onboarding: false,
       requireConfig: 'optional',
       autodiscover: false,

@@ -26,7 +26,7 @@ k3s_server_extra_args:
   - "--node-ip={{ k3s_server_node_ip }}"
   - "--node-external-ip={{ k3s_server_node_ip }}"
   - "--tls-san=edge.tailnet"
-  - "--tls-san=hs.psimaker.org"
+  - "--tls-san=hs.example.com"
   - "--write-kubeconfig-mode=0640"
   - "--node-label=topology.kubernetes.io/zone=hetzner-fsn1"
   - "--node-label=node-role.kubernetes.io/control-plane=true"

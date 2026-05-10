@@ -114,7 +114,7 @@ typo. helm-controller's error messages are accurate but terse.
   chart and the new chart renamed a value. Catch with `kubeconform` and
   `helm template` in CI; sometimes slips through.
 - **GitRepository can't reach Gitea.** Either Gitea on airbase is down,
-  Cilium DNS resolution to `git.psimaker.org` is failing, or the
+  Cilium DNS resolution to `git.example.com` is failing, or the
   cross-tier path (edge cluster ↔ airbase Gitea) is broken. See
   [`tailscale-mesh-mtu.md`](tailscale-mesh-mtu.md) and
   [`k3s-node-notready.md`](k3s-node-notready.md).

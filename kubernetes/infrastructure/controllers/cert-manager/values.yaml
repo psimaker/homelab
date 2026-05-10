@@ -5,7 +5,7 @@
 # does not get stuck.
 #
 # DNS01 self-check uses Cloudflare's authoritative resolvers because we issue
-# wildcard certs for *.psimaker.org and *.loogi.ch via Cloudflare DNS. Using the
+# wildcard certs for *.example.com and *.loogi.ch via Cloudflare DNS. Using the
 # default in-cluster resolver caused negative-cache lookups during cert renewal.
 
 crds:

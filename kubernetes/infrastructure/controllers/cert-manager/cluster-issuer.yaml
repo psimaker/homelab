@@ -2,7 +2,7 @@
 # Production Let's Encrypt issuer using DNS-01 over Cloudflare.
 #
 # We use DNS-01 (not HTTP-01) because:
-# 1. We need wildcards for `*.loogi.ch` and `*.psimaker.org` — HTTP-01 cannot
+# 1. We need wildcards for `*.loogi.ch` and `*.example.com` — HTTP-01 cannot
 #    issue wildcards.
 # 2. cloudflared terminates TLS upstream; an HTTP-01 challenge would have to
 #    be routed through it, which is doable but pointlessly complex.
@@ -24,7 +24,7 @@ spec:
       - selector:
           dnsZones:
             - loogi.ch
-            - psimaker.org
+            - example.com
         dns01:
           cloudflare:
             apiTokenSecretRef:
@@ -50,7 +50,7 @@ spec:
       - selector:
           dnsZones:
             - loogi.ch
-            - psimaker.org
+            - example.com
         dns01:
           cloudflare:
             apiTokenSecretRef:

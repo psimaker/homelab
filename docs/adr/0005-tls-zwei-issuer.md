@@ -16,7 +16,7 @@ certificates renew, the operator UI is convenient when adding a new
 host on the fly.
 
 For Tier-1 I want wildcard certificates (`*.loogi.ch`,
-`*.psimaker.org`'s Tier-1 sub-zone) and DNS-01 challenges, because the
+`*.example.com`'s Tier-1 sub-zone) and DNS-01 challenges, because the
 Cloudflare Tunnel ingress means HTTP-01 against the upstream is messy
 and because wildcards keep the IngressRoute manifests simple. That is a
 clean fit for cert-manager with the Cloudflare DNS-01 solver.

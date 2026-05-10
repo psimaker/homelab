@@ -1,8 +1,8 @@
 ---
 # Two wildcard certs covering all Tier-1 surfaces. Stored in `traefik` namespace
-# so IngressRoutes there can mount them by name. Sub-domains under `psimaker.org`
-# are reserved for Tier-1 (id.psimaker.org, hs.psimaker.org, …); apex and
-# Tier-2-owned hosts (bitwarden.psimaker.org etc.) are issued by Nginx Proxy
+# so IngressRoutes there can mount them by name. Sub-domains under `example.com`
+# are reserved for Tier-1 (id.example.com, hs.example.com, …); apex and
+# Tier-2-owned hosts (bitwarden.example.com etc.) are issued by Nginx Proxy
 # Manager separately, see docs/adr/0005-tls-zwei-issuer.md.
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -35,9 +35,9 @@ spec:
   issuerRef:
     name: letsencrypt-prod
     kind: ClusterIssuer
-  commonName: "*.psimaker.org"
+  commonName: "*.example.com"
   dnsNames:
-    - "*.psimaker.org"
+    - "*.example.com"
   duration: 2160h
   renewBefore: 360h
   privateKey:

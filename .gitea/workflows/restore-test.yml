@@ -97,7 +97,7 @@ jobs:
             -H "Priority: urgent" \
             -H "Tags: rotating_light,bomb" \
             -d "Restore-test diff is non-empty. See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            https://ntfy.psimaker.org/homelab-critical
+            https://ntfy.example.com/homelab-critical
 
       - name: Warn on infra failure
         if: failure() && steps.run.outputs.rc == '2'
@@ -109,4 +109,4 @@ jobs:
             -H "Title: restore-test infra error" \
             -H "Tags: warning,backup" \
             -d "Restore-test could not run. See ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
-            https://ntfy.psimaker.org/homelab-warnings
+            https://ntfy.example.com/homelab-warnings

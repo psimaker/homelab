@@ -40,7 +40,7 @@ and this role is idempotent.
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `headscale_url` | `https://hs.psimaker.org` | Login server. |
+| `headscale_url` | `https://hs.example.com` | Login server. |
 | `tailscale_tags` | `[tag:node]` | Match the Headscale ACL tag list. |
 | `tailscale_authkey` | (SOPS) | Pre-auth key, single-use unless `reusable`. |
 | `tailscale_accept_routes` | `true` | Accept advertised subnets. |

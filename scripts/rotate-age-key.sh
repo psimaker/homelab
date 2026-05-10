@@ -229,7 +229,7 @@ update_ci_secret() {
 The CI runner uses the SOPS_AGE_KEY environment variable for ansible-apply,
 restore-test, and any other workflow that needs to decrypt. Update it in:
 
-  Gitea:  https://git.psimaker.org/umut.erdem/homelab → Settings → Actions → Secrets
+  Gitea:  https://git.example.com/umut.erdem/homelab → Settings → Actions → Secrets
   GitHub: not used (mirror only; CI runs on Gitea)
 
 The new private key value is the FULL file contents:

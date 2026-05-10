@@ -1,7 +1,7 @@
 # LOOGI SearXNG limiter config — limiter.toml as ConfigMap.
 #
 # Generated from /data/loogi/searxng/limiter.toml on airbase. Source of truth
-# is the loogi repo at git.psimaker.org/umut.erdem/loogi.
+# is the loogi repo at git.example.com/umut.erdem/loogi.
 #
 # Differences from the Compose deploy:
 #   * trusted_proxies: replaces the Docker-bridge RFC1918 ranges with:
@@ -26,7 +26,7 @@ metadata:
 data:
   limiter.toml: |
     # LOOGI — Limiter / Bot-Detection (k3s deploy).
-    # Mirror of git.psimaker.org/umut.erdem/loogi:searxng/limiter.toml with
+    # Mirror of git.example.com/umut.erdem/loogi:searxng/limiter.toml with
     # trusted_proxies adjusted for k3s + Cloudflare edge.
 
     [botdetection]

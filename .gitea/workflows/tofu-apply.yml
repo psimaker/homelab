@@ -85,7 +85,7 @@ jobs:
             -H "Title: tofu apply OK" \
             -H "Tags: white_check_mark,terraform" \
             -d "Commit ${{ github.sha }} applied to PROD." \
-            https://ntfy.psimaker.org/homelab-deploys || true
+            https://ntfy.example.com/homelab-deploys || true
 
       - name: Notify failure
         if: failure()
@@ -98,4 +98,4 @@ jobs:
             -H "Priority: urgent" \
             -H "Tags: rotating_light,terraform" \
             -d "Commit ${{ github.sha }} failed. See ${{ github.server_url }}/${{ github.repository }}/actions" \
-            https://ntfy.psimaker.org/homelab-critical || true
+            https://ntfy.example.com/homelab-critical || true

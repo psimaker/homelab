@@ -26,7 +26,7 @@ restic_storagebox_password: "PLACEHOLDER-storagebox-password"
 
 cloudflared_tunnel_token: "PLACEHOLDER-cloudflared-tunnel-token"
 
-ntfy_failure_url: "https://ntfy.psimaker.org/homelab-critical"
+ntfy_failure_url: "https://ntfy.example.com/homelab-critical"
 
 # --- SOPS metadata block (illustrative — produced by `sops -e`) ------------
 # When this file is actually encrypted the top of it will read like:

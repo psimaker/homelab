@@ -7,7 +7,7 @@
 ## Context
 
 The primary repository for this homelab is on a self-hosted Gitea
-(`git.psimaker.org`). GitHub is a read-only mirror, force-pushed from
+(`git.example.com`). GitHub is a read-only mirror, force-pushed from
 CI on every push to main. Pull requests, code review, and CI all happen
 on Gitea. That is a deliberate choice (sovereignty, data residency, the
 mirror is a recruiter-facing artefact). It does, however, rule out the
@@ -26,7 +26,7 @@ I run Renovate **self-hosted, in-cluster**, as a Kubernetes `CronJob` in
 the `renovate` namespace on Tier-1. It runs on a fixed schedule
 (`before 6am on monday` and `before 6am on thursday`, Europe/Zurich),
 authenticates to Gitea with a service-account token, and opens pull
-requests against the primary `git.psimaker.org/umut.erdem/homelab`
+requests against the primary `git.example.com/umut.erdem/homelab`
 repository. The Renovate image is itself Renovate-tracked (currently
 `ghcr.io/renovatebot/renovate:38`).
 

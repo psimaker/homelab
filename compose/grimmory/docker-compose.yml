@@ -40,7 +40,7 @@ services:
       mariadb:
         condition: service_healthy
     # Port nur intern — Zugriff ueber Nginx Proxy Manager
-    # Domain: library.psimaker.org
+    # Domain: library.example.com
     # ports:
     #   - "6060:6060"
     volumes:

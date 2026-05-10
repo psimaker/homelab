@@ -26,7 +26,7 @@ token to Grafana".
 ## Decision
 
 I am using **Pocket-ID** as the OIDC provider for new Tier-1 admin
-services, hosted at `id.psimaker.org` in the `identity` namespace. It
+services, hosted at `id.example.com` in the `identity` namespace. It
 runs as a single container with a SQLite database backed by a Longhorn
 PVC. Authentication is passkey-only (WebAuthn). OIDC clients are
 configured declaratively in the Pocket-ID admin UI, with the resulting

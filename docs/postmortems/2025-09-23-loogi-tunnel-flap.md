@@ -151,7 +151,7 @@ The chart docs do mention the keepalive flag but it wasn't on my radar.
 - [x] **me** — Add `cloudflared_tunnel_active_streams == 0` Prometheus alert (`CloudflaredTunnelDead`, 2 m) — 2025-09-26 — alert now in `kubernetes/infrastructure/cloudflared/alerts.yaml`.
 - [x] **me** — Document keepalive interval as a known cause in
       [`loogi-availability.md`](../runbooks/loogi-availability.md) — 2025-09-28.
-- [ ] **me** — Decide whether to route LOOGI slow-burn warnings to push (not just digest) — 2026-Q3 — open in [git.psimaker.org/umut.erdem/homelab#142](https://git.psimaker.org/umut.erdem/homelab/issues/142).
+- [ ] **me** — Decide whether to route LOOGI slow-burn warnings to push (not just digest) — 2026-Q3 — open in [git.example.com/umut.erdem/homelab#142](https://git.example.com/umut.erdem/homelab/issues/142).
 - [x] **me** — Renovate guard so a chart bump cannot reset the keepalive env var — 2025-10-04 — added `regexManagers` rule that watches the `extraArgs` block.
 
 ## Lessons

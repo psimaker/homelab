@@ -43,7 +43,7 @@ spec:
               imagePullPolicy: IfNotPresent
               args:
                 - --platform=gitea
-                - --endpoint=https://git.psimaker.org/api/v1
+                - --endpoint=https://git.example.com/api/v1
               env:
                 - name: LOG_LEVEL
                   value: info

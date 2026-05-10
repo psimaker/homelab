@@ -69,9 +69,9 @@ Workloads:
 | Workload                | Public domain                 | Why it lives here                      |
 | ----------------------- | ----------------------------- | -------------------------------------- |
 | LOOGI (SearXNG)         | loogi.ch                      | Stateless web app, horizontally scalable, public SLO target |
-| Pocket-ID               | id.psimaker.org               | OIDC IdP for new admin services         |
+| Pocket-ID               | id.example.com               | OIDC IdP for new admin services         |
 | Tinyauth                | (cluster-internal)            | Forward-auth proxy for non-OIDC tools   |
-| Headscale               | hs.psimaker.org               | Tailscale control-plane (own keys)      |
+| Headscale               | hs.example.com               | Tailscale control-plane (own keys)      |
 | kube-prometheus-stack   | (internal-only via Tailscale) | Cluster + node metrics, alerts          |
 | Loki                    | (internal-only via Tailscale) | Log aggregation                         |
 | Tempo                   | (internal-only via Tailscale) | Trace storage (Day-2 OTel readiness)    |
@@ -95,18 +95,18 @@ Workloads (selection):
 | ---------------- | -------------------------------- | ------------------------------ |
 | Plex             | Personal media library           | (LAN + Tailscale only)         |
 | *arr / sabnzbd   | Media automation behind Gluetun  | (LAN + Tailscale only)         |
-| Nextcloud-AIO    | Files, calendars, contacts       | nextcloud.psimaker.org         |
-| Immich           | Photo library, CUDA-accelerated  | photos.psimaker.org            |
-| Paperless-ngx    | Document archive                 | docs.psimaker.org              |
-| Vaultwarden      | Password manager                 | bitwarden.psimaker.org         |
-| Gitea + runner   | Self-hosted Git + CI             | git.psimaker.org               |
-| n8n              | Workflow automation              | n8n.psimaker.org               |
-| Syncthing        | File sync (incl. VaultSync iOS)  | syncthing.psimaker.org         |
-| ntfy             | Push notifications               | ntfy.psimaker.org              |
+| Nextcloud-AIO    | Files, calendars, contacts       | nextcloud.example.com         |
+| Immich           | Photo library, CUDA-accelerated  | photos.example.com            |
+| Paperless-ngx    | Document archive                 | docs.example.com              |
+| Vaultwarden      | Password manager                 | bitwarden.example.com         |
+| Gitea + runner   | Self-hosted Git + CI             | git.example.com               |
+| n8n              | Workflow automation              | n8n.example.com               |
+| Syncthing        | File sync (incl. VaultSync iOS)  | syncthing.example.com         |
+| ntfy             | Push notifications               | ntfy.example.com              |
 | crawl4ai         | Headless web extraction          | (cluster-internal + LOOGI)     |
-| xbrowsersync     | Browser bookmark sync            | bookmarks.psimaker.org         |
-| Grimmory         | Self-hosted books library        | library.psimaker.org           |
-| Arcane           | Docker management UI             | arcane.psimaker.org            |
+| xbrowsersync     | Browser bookmark sync            | bookmarks.example.com         |
+| Grimmory         | Self-hosted books library        | library.example.com           |
+| Arcane           | Docker management UI             | arcane.example.com            |
 | watchtower       | Image-pull on labelled containers | n/a                           |
 
 > Anything that needs to be portable, scaled out, or rebuilt from zero in
@@ -170,7 +170,7 @@ from anywhere, no port-forwarding at home.
 ### Mesh: Tailscale + Headscale
 
 Inter-node connectivity is a Tailscale mesh. The control plane is a
-self-hosted **Headscale** instance running on the cluster (`hs.psimaker.org`).
+self-hosted **Headscale** instance running on the cluster (`hs.example.com`).
 
 This means there is **one** identity domain for nodes, operator devices
 (laptop, phone), and even individual workloads via the Tailscale Operator if
@@ -205,7 +205,7 @@ two-issuer split is documented in
 Today the home network uses the ISP router's resolver, with Tailscale's
 MagicDNS providing tailnet-host name resolution. **AdGuard Home is planned**
 as a Tier-2 Compose service to add ad-blocking and split-horizon resolution
-for `*.loogi.ch` and `*.psimaker.org` (so internal traffic skips the
+for `*.loogi.ch` and `*.example.com` (so internal traffic skips the
 Cloudflare round-trip). See [`compose/adguard/`](../compose/adguard/) for
 the prepared compose definition.
 
@@ -275,13 +275,13 @@ to match Docker.
 
 ```
 PRIMARY (where commits land, where CI runs):
-  git.psimaker.org/umut.erdem/homelab     (Gitea, private)
+  git.example.com/umut.erdem/homelab     (Gitea, private)
 
 PUBLIC MIRROR (recruiter-facing, read-only):
   github.com/psimaker/homelab             (force-pushed from CI on every push)
 
 LOOGI (separate repo with its own ADRs):
-  git.psimaker.org/umut.erdem/loogi  →  github.com/psimaker/loogi
+  git.example.com/umut.erdem/loogi  →  github.com/psimaker/loogi
 ```
 
 Pushing to Gitea triggers the `mirror-github.yml` workflow, which mirrors
@@ -382,7 +382,7 @@ Two issuers, deliberate:
 | --- | --- | --- |
 | Reverse proxy | Traefik v3.3 | Nginx Proxy Manager |
 | TLS issuer    | cert-manager + Let's Encrypt DNS-01 (Cloudflare) | NPM's built-in ACME (HTTP-01 via NPM) |
-| Wildcards     | `*.loogi.ch`, `*.psimaker.org` (Tier-1 sub-zone) | per-host certs |
+| Wildcards     | `*.loogi.ch`, `*.example.com` (Tier-1 sub-zone) | per-host certs |
 | Enforcement   | TLS 1.2+ via Traefik default; HSTS via middleware | Force-SSL + HSTS toggle in NPM |
 
 Long-form rationale: [`docs/adr/0005-tls-zwei-issuer.md`](adr/0005-tls-zwei-issuer.md).
@@ -417,9 +417,9 @@ is no public observability surface — see
 
 Alertmanager routes:
 
-- `severity: critical` → ntfy `https://ntfy.psimaker.org/homelab-critical`
+- `severity: critical` → ntfy `https://ntfy.example.com/homelab-critical`
   (plus phone push)
-- `severity: warning`  → ntfy `https://ntfy.psimaker.org/homelab-warnings`
+- `severity: warning`  → ntfy `https://ntfy.example.com/homelab-warnings`
   (digest, not paging)
 - `severity: info`     → silenced unless triaging
 
@@ -477,9 +477,9 @@ See [`docs/adr/0007-backup-restic-3-2-1.md`](adr/0007-backup-restic-3-2-1.md).
 
 - **`loogi.ch`** — production search engine and its first-party services
   (`grafana-public.loogi.ch` is **not** used; observability is internal-only)
-- **`psimaker.org`** — personal infrastructure
-  - Tier-2 services use existing subdomains (e.g. `bitwarden.psimaker.org`)
-  - Tier-1 platform uses new subdomains (`id.psimaker.org`, `hs.psimaker.org`)
+- **`example.com`** — personal infrastructure
+  - Tier-2 services use existing subdomains (e.g. `bitwarden.example.com`)
+  - Tier-1 platform uses new subdomains (`id.example.com`, `hs.example.com`)
 - **`*.tailnet` (MagicDNS)** — internal-only services (Grafana, Beszel,
   Headscale admin, Hubble UI)
 
@@ -565,7 +565,7 @@ documentation.
    kubectl create secret generic sops-age --namespace=flux-system \
      --from-file=age.agekey=$HOME/.config/sops/age/keys.txt
    flux bootstrap gitea \
-     --hostname=git.psimaker.org \
+     --hostname=git.example.com \
      --owner=umut.erdem --repository=homelab \
      --path=kubernetes \
      --branch=main

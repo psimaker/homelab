@@ -7,7 +7,7 @@
 ## Context
 
 The primary forge for this homelab is **Gitea**, hosted at
-`git.psimaker.org`. It has been running for years, holds the source
+`git.example.com`. It has been running for years, holds the source
 of truth for this repository (and many others), runs the Gitea
 Actions runner that drives every CI workflow in `.gitea/workflows/`,
 and is integrated into Renovate (ADR-0003), Flux's bootstrap, and the

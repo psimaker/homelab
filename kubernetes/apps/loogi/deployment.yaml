@@ -98,8 +98,8 @@ spec:
 
       containers:
         - name: searxng
-          # renovate: datasource=docker depName=registry.psimaker.org/umut.erdem/loogi
-          image: registry.psimaker.org/umut.erdem/loogi:1.0.0
+          # renovate: datasource=docker depName=registry.example.com/umut.erdem/loogi
+          image: registry.example.com/umut.erdem/loogi:1.0.0
           imagePullPolicy: IfNotPresent
 
           ports:

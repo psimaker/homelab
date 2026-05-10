@@ -7,6 +7,9 @@
 #
 # Do not commit a populated copy of this file.
 
+# --- Domain ---
+# base_domain = "example.com"
+
 # --- Hetzner Cloud ---
 # hcloud_token = "..."
 
@@ -27,6 +30,6 @@
 # tunnel_origin_service = "http://cloudflared.cloudflared.svc.cluster.local:80"
 
 # --- Pocket-ID OIDC (Cloudflare Access IdP) ---
-# pocket_id_metadata_url  = "https://id.psimaker.org/.well-known/openid-configuration"
+# pocket_id_metadata_url  = "https://id.example.com/.well-known/openid-configuration"
 # pocket_id_client_id     = "..."
 # pocket_id_client_secret = "..."

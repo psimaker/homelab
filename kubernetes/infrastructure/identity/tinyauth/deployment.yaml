@@ -53,11 +53,11 @@ spec:
             - name: PROVIDERS_GENERIC_NAME
               value: Pocket-ID
             - name: PROVIDERS_GENERIC_AUTH_URL
-              value: https://id.psimaker.org/authorize
+              value: https://id.example.com/authorize
             - name: PROVIDERS_GENERIC_TOKEN_URL
-              value: https://id.psimaker.org/api/oidc/token
+              value: https://id.example.com/api/oidc/token
             - name: PROVIDERS_GENERIC_USER_INFO_URL
-              value: https://id.psimaker.org/api/oidc/userinfo
+              value: https://id.example.com/api/oidc/userinfo
             - name: PROVIDERS_GENERIC_SCOPES
               value: openid,email,profile,groups
             - name: USERS_LOGIN_TIMEOUT

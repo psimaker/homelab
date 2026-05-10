@@ -1,7 +1,7 @@
 # AdGuard Home (future addition)
 
 Recursive DNS resolver with ad/tracker filtering and split-horizon rewrites
-for `loogi.ch` and `psimaker.org` (so tailnet clients reach Tier-1/Tier-2
+for `loogi.ch` and `example.com` (so tailnet clients reach Tier-1/Tier-2
 services on `100.64.0.0/10` instead of the public IP).
 
 **Status — currently aspirational.** Today airbase forwards DNS directly to

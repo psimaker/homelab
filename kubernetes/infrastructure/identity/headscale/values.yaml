@@ -29,7 +29,7 @@ persistence:
 
 # Headscale config. The chart renders this into a config.yaml ConfigMap.
 configuration:
-  server_url: https://hs.psimaker.org
+  server_url: https://hs.example.com
   listen_addr: 0.0.0.0:8080
   metrics_listen_addr: 0.0.0.0:9090
   grpc_listen_addr: 0.0.0.0:50443
@@ -78,13 +78,13 @@ configuration:
 
   oidc:
     only_start_if_oidc_is_available: true
-    issuer: https://id.psimaker.org
+    issuer: https://id.example.com
     client_id: headscale
     # client_secret_path injected from secret.sops.yaml as a volume
     client_secret_path: /etc/headscale/oidc-client-secret
     scope: ["openid", "profile", "email", "groups"]
     extra_params:
-      domain_hint: psimaker.org
+      domain_hint: example.com
     allowed_groups:
       - admins
       - operators

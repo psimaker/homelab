@@ -28,4 +28,4 @@ metadata:
       LOOGI — public SearXNG-based search engine on loogi.ch. Tier-1 SLO pilot.
       The Valkey HelmRelease in this namespace is the limiter / favicon /
       autocomplete cache. Source of truth for the SearXNG image is
-      git.psimaker.org/umut.erdem/loogi.
+      git.example.com/umut.erdem/loogi.

@@ -42,7 +42,7 @@ jobs:
       - name: Configure git identity
         run: |
           git config --global user.name "homelab-mirror-bot"
-          git config --global user.email "noreply@psimaker.org"
+          git config --global user.email "noreply@example.com"
 
       - name: Add GitHub remote (with token)
         env:

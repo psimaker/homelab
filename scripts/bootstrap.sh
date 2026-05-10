@@ -22,7 +22,7 @@
 #
 # Prerequisites:
 #   - Operator workstation with: tofu, ansible-playbook, kubectl, flux, sops, age
-#   - Network reachability to git.psimaker.org (CI runner or VPN)
+#   - Network reachability to git.example.com (CI runner or VPN)
 #   - terraform/live/prod/terraform.tfvars.sops.json populated and decryptable
 #   - Inventory in ansible/inventory/hosts.yml correct for the deployment
 #   - SSH key ~/.ssh/id_ed25519_homelab loaded (or override SSH_KEY)
@@ -100,7 +100,7 @@ Options:
 Environment overrides:
   KUBECONFIG_PATH    Where to fetch the kubeconfig (default: ~/.kube/config-homelab)
   AGE_KEY_FILE       SOPS age private key path (default: ~/.config/sops/age/keys.txt)
-  GITEA_HOSTNAME     Gitea host for flux bootstrap (default: git.psimaker.org)
+  GITEA_HOSTNAME     Gitea host for flux bootstrap (default: git.example.com)
   GITEA_OWNER        Repo owner (default: umut.erdem)
   GITEA_REPO         Repo name (default: homelab)
 
@@ -325,7 +325,7 @@ flux_bootstrap() {
     return 0
   fi
 
-  : "${GITEA_HOSTNAME:=git.psimaker.org}"
+  : "${GITEA_HOSTNAME:=git.example.com}"
   : "${GITEA_OWNER:=umut.erdem}"
   : "${GITEA_REPO:=homelab}"
 
@@ -393,10 +393,10 @@ summary() {
 
   Live links:
     Production:   https://loogi.ch
-    Source:       https://${GITEA_HOSTNAME:-git.psimaker.org}/${GITEA_OWNER:-umut.erdem}/${GITEA_REPO:-homelab}
+    Source:       https://${GITEA_HOSTNAME:-git.example.com}/${GITEA_OWNER:-umut.erdem}/${GITEA_REPO:-homelab}
     Mirror:       https://github.com/psimaker/homelab
-    Headscale:    https://hs.psimaker.org    (after identity Kustomization is Ready)
-    Pocket-ID:    https://id.psimaker.org    (after identity Kustomization is Ready)
+    Headscale:    https://hs.example.com    (after identity Kustomization is Ready)
+    Pocket-ID:    https://id.example.com    (after identity Kustomization is Ready)
 
   Next steps:
     1. Wait for the 'apps' Kustomization to converge (LOOGI deploy).

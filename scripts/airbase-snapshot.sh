@@ -69,22 +69,22 @@ confirm() {
 # Each entry: <stack-name>|<remote-filename>|<public-domain-or-LAN>|<one-liner>
 declare -a STACK_TABLE=(
   "adguard|docker-compose.yml|LAN/Tailscale|AdGuardHome split-horizon DNS resolver"
-  "arcane|compose.yml|arcane.psimaker.org|Docker management UI"
+  "arcane|compose.yml|arcane.example.com|Docker management UI"
   "arr-stack|docker-compose.yml|LAN/Tailscale|Sonarr/Radarr/Prowlarr/sabnzbd behind Gluetun"
   "crawl4ai|compose.yml|cluster-internal + LOOGI|Headless web extraction backend"
-  "gitea|docker-compose.yml|git.psimaker.org|Self-hosted Git + Actions"
+  "gitea|docker-compose.yml|git.example.com|Self-hosted Git + Actions"
   "gitea-runner|docker-compose.yml|cluster-internal|Gitea Actions runner"
-  "grimmory|compose.yml|library.psimaker.org|Self-hosted books library"
-  "immich|docker-compose.yml|photos.psimaker.org|Photo library, CUDA-accelerated"
-  "n8n|docker-compose.yml|n8n.psimaker.org|Workflow automation"
-  "nextcloud-aio|docker-compose.yml|nextcloud.psimaker.org|Nextcloud All-in-One"
-  "ntfy|docker-compose.yml|ntfy.psimaker.org|Push-notification server"
-  "paperless|docker-compose.yml|docs.psimaker.org|Document archive (paperless-ngx)"
+  "grimmory|compose.yml|library.example.com|Self-hosted books library"
+  "immich|docker-compose.yml|photos.example.com|Photo library, CUDA-accelerated"
+  "n8n|docker-compose.yml|n8n.example.com|Workflow automation"
+  "nextcloud-aio|docker-compose.yml|nextcloud.example.com|Nextcloud All-in-One"
+  "ntfy|docker-compose.yml|ntfy.example.com|Push-notification server"
+  "paperless|docker-compose.yml|docs.example.com|Document archive (paperless-ngx)"
   "plex|docker-compose.yml|LAN/Tailscale|Plex media server"
-  "syncthing|docker-compose.yml|syncthing.psimaker.org|File sync incl. VaultSync iOS"
-  "vaultwarden|docker-compose.yml|bitwarden.psimaker.org|Self-hosted Bitwarden"
+  "syncthing|docker-compose.yml|syncthing.example.com|File sync incl. VaultSync iOS"
+  "vaultwarden|docker-compose.yml|bitwarden.example.com|Self-hosted Bitwarden"
   "watchtower|docker-compose.yml|n/a|Scheduled image-pull on labelled containers"
-  "xbrowsersync|docker-compose.yml|bookmarks.psimaker.org|Browser bookmark sync"
+  "xbrowsersync|docker-compose.yml|bookmarks.example.com|Browser bookmark sync"
 )
 
 # ---- secret patterns to redact ---------------------------------------------

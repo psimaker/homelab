@@ -14,7 +14,7 @@ spec:
   retain: 14
   concurrency: 2
   labels:
-    homelab.psimaker.org/job: snapshot-6h
+    homelab.example.com/job: snapshot-6h
 ---
 # Daily backup to Hetzner Object Storage. Retain 14 days; older history is
 # kept by restic in the offsite backup tiers (Hetzner Storage Box / B2),
@@ -31,4 +31,4 @@ spec:
   retain: 14
   concurrency: 1
   labels:
-    homelab.psimaker.org/job: backup-daily
+    homelab.example.com/job: backup-daily

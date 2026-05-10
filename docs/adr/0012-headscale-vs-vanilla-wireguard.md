@@ -29,7 +29,7 @@ no key rotation tooling, no ACLs as code).
 ## Decision
 
 I am running **Headscale**, self-hosted on the Tier-1 cluster at
-`hs.psimaker.org`, with the standard **Tailscale clients** on every
+`hs.example.com`, with the standard **Tailscale clients** on every
 node and operator device. Headscale is the control plane (key
 exchange, ACL distribution, MagicDNS); the data plane is the same
 WireGuard implementation Tailscale itself ships. ACLs live as code in

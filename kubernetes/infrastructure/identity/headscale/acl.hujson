@@ -10,8 +10,8 @@
   // OIDC `groups` claim.
   // -------------------------------------------------------------------------
   "groups": {
-    "group:admins":    ["umut.erdem@psimaker.org"],
-    "group:operators": ["umut.erdem@psimaker.org"],
+    "group:admins":    ["umut.erdem@example.com"],
+    "group:operators": ["umut.erdem@example.com"],
     "group:family":    [],   // expand if family devices ever join
   },
 
@@ -104,7 +104,7 @@
   // -------------------------------------------------------------------------
   "tests": [
     {
-      "src":    "umut.erdem@psimaker.org",
+      "src":    "umut.erdem@example.com",
       "accept": ["airbase:22", "edge:6443", "100.64.0.2:32400"],
     },
     {

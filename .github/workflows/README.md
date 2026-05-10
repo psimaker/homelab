@@ -3,7 +3,7 @@
 This directory exists because the public mirror is on **GitHub**, but the
 canonical repository — and the only CI that matters — lives on **Gitea**:
 
-> https://git.psimaker.org/umut.erdem/homelab → `.gitea/workflows/`
+> https://git.example.com/umut.erdem/homelab → `.gitea/workflows/`
 
 The workflows in this directory are intentional no-ops:
 

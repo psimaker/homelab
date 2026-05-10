@@ -6,8 +6,8 @@ data "cloudflare_zone" "this" {
 # Edge-node A/AAAA — bypasses the tunnel because Tailscale + ACME need
 # direct reachability of the public IPs.
 resource "cloudflare_dns_record" "edge_a" {
-  zone_id = data.cloudflare_zone.this["psimaker_org"].zone_id
-  name    = "edge.psimaker.org"
+  zone_id = data.cloudflare_zone.this["primary"].zone_id
+  name    = "edge.${var.base_domain}"
   type    = "A"
   content = module.edge.ipv4
   proxied = false
@@ -15,8 +15,8 @@ resource "cloudflare_dns_record" "edge_a" {
 }
 
 resource "cloudflare_dns_record" "edge_aaaa" {
-  zone_id = data.cloudflare_zone.this["psimaker_org"].zone_id
-  name    = "edge.psimaker.org"
+  zone_id = data.cloudflare_zone.this["primary"].zone_id
+  name    = "edge.${var.base_domain}"
   type    = "AAAA"
   content = module.edge.ipv6
   proxied = false

@@ -1,7 +1,7 @@
 # LOOGI SearXNG settings — full settings.yml as a ConfigMap.
 #
 # Generated from /data/loogi/searxng/settings.yml on airbase. Source of truth
-# is the loogi repo at git.psimaker.org/umut.erdem/loogi (specifically
+# is the loogi repo at git.example.com/umut.erdem/loogi (specifically
 # searxng/settings.yml in that repo). When the upstream loogi repo's
 # settings.yml changes, this ConfigMap must be updated in the same PR — we
 # keep them in lockstep instead of mounting a build-time artefact, because
@@ -28,7 +28,7 @@ metadata:
 data:
   settings.yml: |
     # LOOGI — SearXNG settings (k3s deploy).
-    # Mirror of git.psimaker.org/umut.erdem/loogi:searxng/settings.yml with
+    # Mirror of git.example.com/umut.erdem/loogi:searxng/settings.yml with
     # only the Valkey URL adjusted to point at the in-cluster service DNS.
     # Deltas from upstream defaults via use_default_settings (Deep-Merge).
     use_default_settings:

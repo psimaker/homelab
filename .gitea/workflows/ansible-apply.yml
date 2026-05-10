@@ -108,7 +108,7 @@ jobs:
             -H "Title: ansible-apply OK" \
             -H "Tags: white_check_mark,ansible" \
             -d "site.yml converged on commit ${{ github.sha }}." \
-            https://ntfy.psimaker.org/homelab-deploys || true
+            https://ntfy.example.com/homelab-deploys || true
 
       - name: Notify failure
         if: failure()
@@ -121,4 +121,4 @@ jobs:
             -H "Priority: urgent" \
             -H "Tags: rotating_light,ansible" \
             -d "Commit ${{ github.sha }} failed. See ${{ github.server_url }}/${{ github.repository }}/actions" \
-            https://ntfy.psimaker.org/homelab-critical || true
+            https://ntfy.example.com/homelab-critical || true

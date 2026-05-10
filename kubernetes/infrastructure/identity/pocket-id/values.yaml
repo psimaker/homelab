@@ -24,7 +24,7 @@ persistence:
 
 env:
   - name: PUBLIC_APP_URL
-    value: https://id.psimaker.org
+    value: https://id.example.com
   - name: TRUST_PROXY
     value: "true"
   - name: ANALYTICS_DISABLED
@@ -81,7 +81,7 @@ oidcClients:
   - id: headscale
     name: Headscale
     callbackURLs:
-      - https://hs.psimaker.org/oidc/callback
+      - https://hs.example.com/oidc/callback
     isPublic: false
     pkceEnabled: true
     allowedUserGroups:

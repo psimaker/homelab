@@ -1,7 +1,7 @@
 # `kubernetes/` — Flux-managed cluster manifests
 
 This directory is the source of truth for the Tier-1 k3s cluster. Every
-manifest here is reconciled by Flux v2 from `git.psimaker.org/umut.erdem/homelab`,
+manifest here is reconciled by Flux v2 from `git.example.com/umut.erdem/homelab`,
 branch `main`, path `kubernetes/`.
 
 For the *why* behind the choices below, see
@@ -68,7 +68,7 @@ kubectl create secret generic sops-age \
 
 # 3. Bootstrap Flux (this writes gotk-components.yaml + gotk-sync.yaml)
 flux bootstrap gitea \
-  --hostname=git.psimaker.org \
+  --hostname=git.example.com \
   --owner=umut.erdem \
   --repository=homelab \
   --branch=main \

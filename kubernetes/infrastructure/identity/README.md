@@ -5,9 +5,9 @@ authentication and tailnet membership to this directory.
 
 | Controller | Role                                                    | Public surface                     |
 | ---------- | ------------------------------------------------------- | ---------------------------------- |
-| Pocket-ID  | OIDC IdP (single-source-of-truth for users + groups)    | `id.psimaker.org`                  |
+| Pocket-ID  | OIDC IdP (single-source-of-truth for users + groups)    | `id.example.com`                  |
 | Tinyauth   | Forward-auth proxy for non-OIDC apps via Traefik        | `auth.tailnet` (cookie domain)     |
-| Headscale  | Tailscale control-plane, ACL-as-code                    | `hs.psimaker.org`                  |
+| Headscale  | Tailscale control-plane, ACL-as-code                    | `hs.example.com`                  |
 
 ## Authentication flow
 
@@ -62,7 +62,7 @@ After the HelmRelease lands and Pocket-ID is reachable:
    handles this in production) and join:
    ```bash
    tailscale up \
-     --login-server=https://hs.psimaker.org \
+     --login-server=https://hs.example.com \
      --authkey=<key-from-step-2> \
      --advertise-tags=tag:server,tag:k8s \
      --advertise-routes=192.168.8.0/24    # airbase only
@@ -87,7 +87,7 @@ no `headscale apply` step is needed.
 
 1. Add the client definition to `pocket-id/values.yaml` under `oidcClients`.
 2. Push, let Flux reconcile.
-3. In the Pocket-ID admin UI (`https://id.psimaker.org`), reveal the
+3. In the Pocket-ID admin UI (`https://id.example.com`), reveal the
    generated client secret.
 4. Encrypt the secret into a SOPS-encrypted Secret in the consumer's
    directory, reference it from the workload's HelmRelease.

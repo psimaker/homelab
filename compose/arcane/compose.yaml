@@ -7,7 +7,7 @@ services:
     ports:
       - "127.0.0.1:3552:3552"
     environment:
-      - APP_URL=https://arcane.psimaker.org
+      - APP_URL=https://arcane.example.com
       - PUID=1000
       - PGID=1000
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}

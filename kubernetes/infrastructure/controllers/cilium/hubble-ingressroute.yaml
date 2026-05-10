@@ -7,7 +7,7 @@ metadata:
   name: hubble-ui
   namespace: kube-system
   annotations:
-    homelab.psimaker.org/exposure: tailnet-only
+    homelab.example.com/exposure: tailnet-only
 spec:
   entryPoints:
     - websecure

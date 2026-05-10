@@ -98,7 +98,7 @@ If you have fifteen minutes and want to understand the moving parts:
 | Logs | Loki (Promtail + Docker driver) |
 | Traces | Tempo (OTLP receiver) |
 | Uptime | Beszel agents on every node |
-| Alerting | Alertmanager → ntfy.psimaker.org |
+| Alerting | Alertmanager → ntfy.example.com |
 | Backup | restic, 3-2-1 (Hetzner Storage Box + Backblaze B2), weekly restore-test |
 | CI | Gitea Actions (self-hosted runner on airbase) |
 | Deps | Renovate, self-hosted CronJob, auto-merge on patch+minor |
@@ -116,14 +116,14 @@ homelab/
 │   └── apps/              Workloads (loogi, …)
 ├── compose/               Tier-2 Docker Compose stacks (airbase)
 ├── scripts/               bootstrap, sops helpers, restore-test
-├── .gitea/workflows/      CI on git.psimaker.org
+├── .gitea/workflows/      CI on git.example.com
 └── .github/workflows/     no-op stubs (mirror only — Gitea is the source)
 ```
 
 ## Live links
 
 - Production: [loogi.ch](https://loogi.ch)
-- Code (canonical): [git.psimaker.org/umut.erdem/homelab](https://git.psimaker.org/umut.erdem/homelab) *(private)*
+- Code (canonical): [git.example.com/umut.erdem/homelab](https://git.example.com/umut.erdem/homelab) *(private)*
 - Code (mirror): you're looking at it
 - LOOGI source: [github.com/psimaker/loogi](https://github.com/psimaker/loogi)
 

@@ -18,7 +18,7 @@ If any one of those screams at you, jump to the matching cause below.
 
 Tier-1 TLS goes through cert-manager + Let's Encrypt **DNS-01** challenge,
 solved against Cloudflare. Wildcard certs for `*.loogi.ch` and
-`*.psimaker.org` are issued and renewed automatically; Tier-2 (Compose) uses
+`*.example.com` are issued and renewed automatically; Tier-2 (Compose) uses
 Nginx Proxy Manager's built-in HTTP-01 ACME and is **not** in scope here —
 [`docs/adr/0005-tls-zwei-issuer.md`](../adr/0005-tls-zwei-issuer.md) explains
 the split.
@@ -88,7 +88,7 @@ kubectl get secret cloudflare-api-token -n cert-manager -o jsonpath='{.data.api-
 ```
 
 The token needs `Zone:DNS:Edit` and `Zone:Zone:Read` on both `loogi.ch` and
-`psimaker.org`. I rotate this token annually as part of Q1 housekeeping; if
+`example.com`. I rotate this token annually as part of Q1 housekeeping; if
 the rotation drift hit a renewal cycle, this is your problem.
 
 ### Test the token directly

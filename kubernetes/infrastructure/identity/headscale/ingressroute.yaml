@@ -1,5 +1,5 @@
 ---
-# Headscale public IngressRoute — hs.psimaker.org. Public because nodes need
+# Headscale public IngressRoute — hs.example.com. Public because nodes need
 # the control-plane endpoint reachable to bootstrap; once joined, the actual
 # data plane is direct WireGuard between peers, no traffic flows through
 # Headscale itself.
@@ -9,12 +9,12 @@ metadata:
   name: headscale
   namespace: identity
   annotations:
-    homelab.psimaker.org/exposure: public
+    homelab.example.com/exposure: public
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`hs.psimaker.org`)
+    - match: Host(`hs.example.com`)
       kind: Rule
       services:
         - name: headscale

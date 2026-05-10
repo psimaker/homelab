@@ -152,9 +152,9 @@ grafana:
       # client_secret is patched in by HelmRelease valuesFrom (Secret)
       scopes: openid profile email groups
       empty_scopes: false
-      auth_url: https://id.psimaker.org/authorize
-      token_url: https://id.psimaker.org/api/oidc/token
-      api_url: https://id.psimaker.org/api/oidc/userinfo
+      auth_url: https://id.example.com/authorize
+      token_url: https://id.example.com/api/oidc/token
+      api_url: https://id.example.com/api/oidc/userinfo
       role_attribute_path: |
         contains(groups[*], 'admin') && 'Admin' || contains(groups[*], 'editor') && 'Editor' || 'Viewer'
       use_pkce: true

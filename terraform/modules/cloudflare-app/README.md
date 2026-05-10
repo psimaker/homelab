@@ -47,8 +47,8 @@ module "grafana" {
   source = "../../modules/cloudflare-app"
 
   account_id = var.cloudflare_account_id
-  zone_id    = data.cloudflare_zone.psimaker_org.zone_id
-  hostname   = "grafana.psimaker.org"
+  zone_id    = data.cloudflare_zone.example_com.zone_id
+  hostname   = "grafana.example.com"
   tunnel_id  = cloudflare_zero_trust_tunnel_cloudflared.homelab_prod.id
   service    = "http://cloudflared.cloudflared.svc.cluster.local:80"
 

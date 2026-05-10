@@ -76,7 +76,7 @@ spec:
 
               Either Renovate hasn't opened a PR, or it has and the PR is
               waiting for human review. Investigate before it drifts further.
-            runbook_url: https://git.psimaker.org/umut.erdem/homelab/wiki/runbooks/helmrelease-stale
+            runbook_url: https://git.example.com/umut.erdem/homelab/wiki/runbooks/helmrelease-stale
 
         - alert: HelmReleaseFailed
           expr: |
@@ -91,7 +91,7 @@ spec:
               The HelmRelease has been not-Ready for more than 30 minutes.
               `flux describe helmrelease -n {{ $labels.namespace }} {{ $labels.name }}`
               to see the conditions.
-            runbook_url: https://git.psimaker.org/umut.erdem/homelab/wiki/runbooks/helmrelease-failed
+            runbook_url: https://git.example.com/umut.erdem/homelab/wiki/runbooks/helmrelease-failed
 
         - alert: HelmReleaseSuspended
           expr: |
@@ -106,4 +106,4 @@ spec:
               A suspended HelmRelease will not reconcile. If this is intentional
               (e.g. paused during an incident), silence the alert; otherwise
               `flux resume helmrelease -n {{ $labels.namespace }} {{ $labels.name }}`.
-            runbook_url: https://git.psimaker.org/umut.erdem/homelab/wiki/runbooks/helmrelease-suspended
+            runbook_url: https://git.example.com/umut.erdem/homelab/wiki/runbooks/helmrelease-suspended
